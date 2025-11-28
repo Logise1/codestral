@@ -954,6 +954,26 @@
         document.getElementById('back-to-dashboard').addEventListener('click', showDashboard);
         document.getElementById('logo-btn').addEventListener('click', showDashboard);
         document.getElementById('nav-home-btn').addEventListener('click', showDashboard);
+        
+        // FIX: Add listener for the "Abrir Web" button
+        document.getElementById('preview-new-tab-btn').addEventListener('click', () => {
+            // Check if the current language is HTML (only web previews are valid)
+            if (currentLang === 'html') {
+                // Get the current HTML content from the iframe's srcdoc
+                const htmlContent = dom.previewIframe.srcdoc;
+                
+                // Open a new window/tab
+                const newWindow = window.open();
+                
+                // Write the content to the new window
+                if (newWindow) {
+                    newWindow.document.write(htmlContent);
+                    newWindow.document.close();
+                }
+            } else {
+                showAlert('Previsualización no disponible', 'Solo los proyectos con lenguaje HTML pueden abrirse en una nueva ventana.');
+            }
+        });
 
         // --- AI LOGIC (MISTRAL with STREAM) ---
         document.getElementById('ai-prompt').addEventListener('keydown', async (e) => {
