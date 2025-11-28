@@ -269,8 +269,8 @@
                         <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition-all flex items-center gap-2 text-sm">
                             <span class="material-symbols-outlined text-lg">add</span> Nuevo
                         </button>
-                        <!-- Dropdown Menu -->
-                        <div class="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-xl hidden group-hover:block z-20">
+                        <!-- Dropdown Menu - FIX: Removed mt-1 to prevent premature closing on mouse drag down -->
+                        <div class="absolute right-0 top-full w-48 bg-gray-800 border border-gray-700 rounded-md shadow-xl hidden group-hover:block z-20">
                             <div class="py-1">
                                 <button id="new-folder-btn" class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2">
                                     <span class="material-symbols-outlined text-gray-400">folder</span> Carpeta
@@ -422,14 +422,14 @@
         const SYSTEM_PROMPT_DIFF = `Eres un asistente de código. Identifica cambios. Devuelve SOLO un array JSON: [{"originalLine":"...","editedLine":"..."},...]`;
 
         const firebaseConfig = {
-         apiKey: "AIzaSyAP7a8L45teU-bW7aLG7wG6WAlW4YlWCXE",
-         authDomain: "weberiawebs.firebaseapp.com",
-         databaseURL: "https://weberiawebs-default-rtdb.europe-west1.firebasedatabase.app",
-         projectId: "weberiawebs",
-         storageBucket: "weberiawebs.appspot.com",
-         messagingSenderId: "1010989728559",
-         appId: "1:1010989728559:web:85538155fc4473809057da",
-         measurementId: "G-HL18KF992B"
+          apiKey: "AIzaSyAP7a8L45teU-bW7aLG7wG6WAlW4YlWCXE",
+          authDomain: "weberiawebs.firebaseapp.com",
+          databaseURL: "https://weberiawebs-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "weberiawebs",
+          storageBucket: "weberiawebs.appspot.com",
+          messagingSenderId: "1010989728559",
+          appId: "1:1010989728559:web:85538155fc4473809057da",
+          measurementId: "G-HL18KF992B"
         };
 
         // --- APP STATE ---
@@ -476,7 +476,7 @@
             setupAuthListener();
         } catch (e) {
             console.error("Firebase Init Error:", e);
-            alert("Error crítico iniciando la base de datos.");
+            showAlert("Error crítico iniciando la base de datos.");
         }
 
         // --- AUTH LOGIC ---
