@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -852,14 +851,20 @@
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
+                let buffer = ''; // Buffer para manejar chunks incompletos
+
                 if (!isAiDiffModeEnabled) monacoEditor.setValue('');
 
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
 
-                    const chunk = decoder.decode(value, { stream: true });
-                    const lines = chunk.split('\n');
+                    // Decodificar y agregar al buffer
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // Procesar líneas completas
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || ''; // Guardar la última línea incompleta
 
                     for (const line of lines) {
                         if (line.startsWith('data: ')) {
@@ -880,8 +885,27 @@
                                     }
                                 }
                             } catch (e) {
-                                console.warn("Could not parse stream chunk:", jsonStr);
+                                console.warn("Could not parse stream chunk:", jsonStr, e);
                             }
+                        }
+                    }
+                }
+
+                // Procesar cualquier dato restante en el buffer
+                if (buffer.trim() && buffer.startsWith('data: ')) {
+                    const jsonStr = buffer.substring(6);
+                    if (jsonStr.trim() !== '[DONE]') {
+                        try {
+                            const parsed = JSON.parse(jsonStr);
+                            const contentChunk = parsed?.choices?.[0]?.delta?.content || '';
+                            if (contentChunk) {
+                                fullResponse += contentChunk;
+                                if (!isAiDiffModeEnabled) {
+                                    monacoEditor.setValue(fullResponse);
+                                }
+                            }
+                        } catch (e) {
+                            console.warn("Could not parse final buffer chunk:", jsonStr, e);
                         }
                     }
                 }
@@ -1066,4 +1090,3 @@
     </script>
 </body>
 </html>
-
