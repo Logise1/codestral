@@ -1,0 +1,1069 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDE con Asistente de IA (Colaborativo)</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Monaco Editor (VS Code's core) Loader -->
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
+    
+    <!-- Google Fonts and Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Changed editor font to Hack -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Hack&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+    <style>
+        /* Custom styles for the app */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #111827; /* Dark background */
+            color: #f3f4f6;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .banner {
+            width: 100%;
+            background-color: #2c3e50; /* A lighter shade than the background */
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 10px 0;
+            flex-shrink: 0; /* Prevent banner from shrinking */
+        }
+        .banner img {
+            max-height: 40px;
+            margin-left: 10px;
+        }
+        #app-container {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .monaco-editor {
+            /* Updated editor font */
+            font-family: 'Hack', monospace;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for a better look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        /* Loading spinner animation */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .tab-active {
+            border-color: #3b82f6;
+            background-color: #3b82f6;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+
+    <div id="initial-loading" class="h-screen w-screen flex items-center justify-center">
+        <div class="spinner" style="width: 48px; height: 48px; border-width: 5px;"></div>
+    </div>
+
+    <div id="top-banner" class="banner hidden">
+        <img src="https://weberia.neocities.org/codestral.png" alt="codestral">
+    </div>
+
+    <!-- Main container -->
+    <div id="app-container" class="w-full hidden">
+
+        <!-- Login View -->
+        <div id="login-view" class="hidden h-full flex items-center justify-center">
+            <div class="w-full max-w-md p-8 space-y-8 bg-gray-800 rounded-xl shadow-lg">
+                <div>
+                    <h2 id="auth-title" class="mt-6 text-center text-3xl font-bold tracking-tight text-white">
+                        Iniciar Sesión
+                    </h2>
+                </div>
+                <form id="login-form" class="mt-8 space-y-6">
+                    <div class="rounded-md shadow-sm -space-y-px">
+                        <div>
+                            <input id="username" name="username" type="text" required class="relative block w-full appearance-none rounded-none rounded-t-md border border-gray-700 bg-gray-900 px-3 py-2 text-white placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm" placeholder="Nombre de usuario">
+                        </div>
+                        <div>
+                            <input id="password" name="password" type="password" required class="relative block w-full appearance-none rounded-none rounded-b-md border border-gray-700 bg-gray-900 px-3 py-2 text-white placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm" placeholder="Contraseña">
+                        </div>
+                    </div>
+                    <div>
+                        <button id="auth-button" type="submit" class="group relative flex w-full justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800">
+                            Acceder
+                        </button>
+                    </div>
+                     <div class="text-sm text-center">
+                        <a href="#" id="toggle-auth-mode" class="font-medium text-blue-400 hover:text-blue-300">¿No tienes cuenta? Regístrate</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard View: Shows list of programs and creation form -->
+        <div id="dashboard-view" class="hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div class="flex justify-between items-center mb-8">
+                    <h1 class="text-4xl font-bold tracking-tight text-white">Dashboard</h1>
+                    <div class="flex items-center gap-4">
+                         <div class="text-right">
+                            <div id="user-info-name" class="text-lg font-bold text-gray-200"></div>
+                        </div>
+                        <button id="logout-btn" class="text-xs bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-full transition-colors">Cerrar Sesión</button>
+                    </div>
+                </div>
+                
+                <!-- Form to create a new program -->
+                <div class="bg-gray-800 p-6 rounded-xl shadow-lg mb-8">
+                    <h2 class="text-2xl font-semibold mb-4">Crear Nuevo Proyecto</h2>
+                    <form id="create-program-form" class="flex flex-col sm:flex-row gap-4">
+                        <input type="text" id="program-name" placeholder="Nombre del Proyecto" class="flex-grow bg-gray-700 text-white placeholder-gray-400 rounded-md px-4 py-2 border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
+                        <select id="program-language" class="bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="html">HTML</option>
+                            <option value="javascript">JavaScript</option>
+                            <option value="css">CSS</option>
+                            <option value="python">Python</option>
+                            <option value="markdown">Markdown</option>
+                        </select>
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-md transition-colors duration-300 flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">add</span>Crear
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Tabs for projects -->
+                <div class="mb-6 border-b border-gray-700">
+                    <nav class="flex space-x-4" aria-label="Tabs">
+                        <button id="my-projects-tab" class="tab-active px-3 py-2 font-medium text-sm rounded-t-md">Mis Proyectos</button>
+                        <button id="shared-projects-tab" class="text-gray-400 hover:text-white px-3 py-2 font-medium text-sm rounded-t-md">Compartidos Conmigo</button>
+                    </nav>
+                </div>
+
+                <!-- List of existing programs -->
+                <div id="programs-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <!-- Program cards will be injected here by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Editor View: Shows code editor and preview -->
+        <div id="editor-view" class="hidden h-full flex flex-col">
+            <header class="bg-gray-800 p-3 flex items-center justify-between shadow-md flex-shrink-0">
+                <button id="back-to-dashboard" class="flex items-center gap-2 text-gray-300 hover:text-white transition-colors">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    <span>Dashboard</span>
+                </button>
+                <h2 id="editor-title" class="text-xl font-semibold text-white"></h2>
+                <button id="preview-new-tab-btn" class="hidden flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md transition-colors">
+                    <span class="material-symbols-outlined">open_in_new</span>
+                    <span>Preview</span>
+                </button>
+            </header>
+            <div class="bg-gray-800 p-3 border-t border-b border-gray-700 flex-shrink-0">
+                <div class="relative">
+                    <button id="ai-settings-toggle" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400 p-1 rounded-full">
+                        <span class="material-symbols-outlined">auto_awesome</span>
+                    </button>
+                    <div id="ai-settings-dropdown" class="absolute left-0 top-full mt-2 w-72 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-10 hidden p-4">
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" id="ai-diff-mode-checkbox" class="form-checkbox h-5 w-5 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500">
+                            <span class="text-gray-300">Habilitar modo de edición IA</span>
+                        </label>
+                    </div>
+                    <input type="text" id="ai-prompt" placeholder="Pídele a Mistral que edite el código..." class="w-full bg-gray-700 text-white placeholder-gray-400 rounded-md pl-12 pr-4 py-2 border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <div id="ai-loading-spinner" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+            <main class="flex-grow flex flex-row overflow-hidden">
+                <div id="editor-container" class="w-1/2 h-full"></div>
+                <div id="preview-container" class="w-1/2 h-full bg-gray-900 border-l-4 border-gray-700">
+                    <iframe id="preview-iframe" class="w-full h-full border-0"></iframe>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl">
+            <h3 id="modal-title" class="text-xl font-semibold text-white mb-4"></h3>
+            <p id="modal-message" class="text-gray-300 mb-4"></p>
+            <div id="modal-diff-container" class="hidden bg-gray-900 rounded-md p-4 max-h-96 overflow-y-auto mb-4">
+                <pre><code id="modal-diff-content" class="text-sm font-mono"></code></pre>
+            </div>
+            <input type="text" id="modal-input" class="hidden w-full bg-gray-700 text-white placeholder-gray-400 rounded-md px-4 py-2 border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none mb-4">
+            <div id="modal-buttons" class="flex justify-end gap-4">
+                <button id="modal-cancel-btn" class="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 text-white transition-colors">Cancelar</button>
+                <button id="modal-confirm-btn" class="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push, remove, get, update } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+
+        // --- DOM ELEMENT REFERENCES ---
+        const initialLoading = document.getElementById('initial-loading');
+        const topBanner = document.getElementById('top-banner');
+        const appContainer = document.getElementById('app-container');
+        const loginView = document.getElementById('login-view');
+        const loginForm = document.getElementById('login-form');
+        const authTitle = document.getElementById('auth-title');
+        const authButton = document.getElementById('auth-button');
+        const toggleAuthMode = document.getElementById('toggle-auth-mode');
+        const dashboardView = document.getElementById('dashboard-view');
+        const editorView = document.getElementById('editor-view');
+        const createProgramForm = document.getElementById('create-program-form');
+        const programsList = document.getElementById('programs-list');
+        const backToDashboardBtn = document.getElementById('back-to-dashboard');
+        const editorContainer = document.getElementById('editor-container');
+        const previewIframe = document.getElementById('preview-iframe');
+        const previewContainer = document.getElementById('preview-container');
+        const editorTitle = document.getElementById('editor-title');
+        const aiPromptInput = document.getElementById('ai-prompt');
+        const aiLoadingSpinner = document.getElementById('ai-loading-spinner');
+        const userInfoName = document.getElementById('user-info-name');
+        const logoutBtn = document.getElementById('logout-btn');
+        const myProjectsTab = document.getElementById('my-projects-tab');
+        const sharedProjectsTab = document.getElementById('shared-projects-tab');
+        const previewNewTabBtn = document.getElementById('preview-new-tab-btn');
+        const aiSettingsToggle = document.getElementById('ai-settings-toggle');
+        const aiSettingsDropdown = document.getElementById('ai-settings-dropdown');
+        const aiDiffModeCheckbox = document.getElementById('ai-diff-mode-checkbox');
+
+        // --- STATE VARIABLES ---
+        let monacoEditor = null;
+        let currentProgramId = null;
+        let currentProgramOwner = null;
+        let currentProgramLanguage = null;
+        let db, auth;
+        let currentUser = null; // This will hold the Firebase user object
+        let debounceTimer;
+        let unsubscribeListeners = [];
+        let activeTab = 'my';
+        let isAiEditing = false;
+        let isLoginMode = true;
+        let isAiDiffModeEnabled = false;
+        let aiConversationHistory = [];
+
+        // --- SYSTEM PROMPTS ---
+        const getSystemPromptReplace = (language) => `Eres un asistente de programación experto. El usuario te proporcionará código en ${language} y una solicitud. Tu respuesta DEBE ser ÚNICAMENTE un bloque de código markdown con el código completo y modificado. No incluyas ninguna explicación fuera del bloque de código. Ejemplo:\n\n\`\`\`${language}\n...código aquí...\n\`\`\``;
+        const SYSTEM_PROMPT_DIFF = `Eres un asistente de programación experto. El usuario te proporcionará código y una solicitud. Tu tarea es identificar las líneas que necesitan cambiar y devolver **únicamente un array JSON** con los cambios. Cada elemento del array debe ser un objeto con dos claves: "originalLine" y "editedLine". "originalLine" debe ser el contenido **exacto e idéntico** de la línea que se va a reemplazar. "editedLine" debe ser el contenido completo de la nueva línea modificada. **Importante**: Solo devuelve el array JSON, sin explicaciones, texto adicional o bloques de código markdown. El formato debe ser estrictamente: [{"originalLine": "contenido_a_reemplazar", "editedLine": "contenido_nuevo"}, ...]`;
+
+
+        // --- FIREBASE SETUP ---
+        const firebaseConfig = {
+         apiKey: "AIzaSyAP7a8L45teU-bW7aLG7wG6WAlW4YlWCXE",
+         authDomain: "weberiawebs.firebaseapp.com",
+         databaseURL: "https://weberiawebs-default-rtdb.europe-west1.firebasedatabase.app",
+         projectId: "weberiawebs",
+         storageBucket: "weberiawebs.appspot.com",
+         messagingSenderId: "1010989728559",
+         appId: "1:1010989728559:web:85538155fc4473809057da",
+         measurementId: "G-HL18KF992B"
+        };
+
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getDatabase(app);
+            auth = getAuth(app);
+        } catch (error) {
+            console.error("Error initializing Firebase:", error);
+            showCustomAlert({ title: 'Error de Conexión', message: 'No se pudo inicializar la aplicación. Revisa la configuración de Firebase.', showCancelButton: false, confirmText: 'OK' });
+        }
+
+        // --- MODAL LOGIC ---
+        function hideModal() {
+            const modal = document.getElementById('custom-modal');
+            modal.classList.add('hidden');
+        }
+
+        function showCustomAlert({
+            title,
+            message,
+            showInput = false,
+            placeholder = '',
+            confirmText = 'Confirmar',
+            cancelText = 'Cancelar',
+            showCancelButton = true,
+            onConfirm = () => {},
+            onCancel = () => {},
+            diffChanges = null
+        }) {
+            const modal = document.getElementById('custom-modal');
+            const modalTitleEl = document.getElementById('modal-title');
+            const modalMessageEl = document.getElementById('modal-message');
+            const modalInputEl = document.getElementById('modal-input');
+            const modalDiffContainer = document.getElementById('modal-diff-container');
+            const modalDiffContent = document.getElementById('modal-diff-content');
+            let modalConfirmBtnEl = document.getElementById('modal-confirm-btn');
+            let modalCancelBtnEl = document.getElementById('modal-cancel-btn');
+
+            modalTitleEl.textContent = title;
+            modalMessageEl.textContent = message;
+            
+            modalInputEl.classList.toggle('hidden', !showInput);
+            modalInputEl.value = '';
+            modalInputEl.placeholder = placeholder;
+
+            if (diffChanges) {
+                let diffHtml = '';
+                const escapeHtml = (unsafe) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+                diffChanges.forEach(change => {
+                    diffHtml += `<span class="text-red-400">- ${escapeHtml(change.originalLine)}</span>\n`;
+                    diffHtml += `<span class="text-green-400">+ ${escapeHtml(change.editedLine)}</span>\n\n`;
+                });
+                modalDiffContent.innerHTML = diffHtml;
+                modalDiffContainer.classList.remove('hidden');
+            } else {
+                modalDiffContainer.classList.add('hidden');
+            }
+
+            // Clone and replace to remove old listeners
+            const newConfirmBtn = modalConfirmBtnEl.cloneNode(true);
+            modalConfirmBtnEl.parentNode.replaceChild(newConfirmBtn, modalConfirmBtnEl);
+            modalConfirmBtnEl = newConfirmBtn;
+            
+            const newCancelBtn = modalCancelBtnEl.cloneNode(true);
+            modalCancelBtnEl.parentNode.replaceChild(newCancelBtn, modalCancelBtnEl);
+            modalCancelBtnEl = newCancelBtn;
+
+            modalConfirmBtnEl.textContent = confirmText;
+            modalCancelBtnEl.textContent = cancelText;
+            modalCancelBtnEl.classList.toggle('hidden', !showCancelButton);
+
+            modalConfirmBtnEl.addEventListener('click', () => {
+                const inputValue = modalInputEl.value;
+                hideModal();
+                onConfirm(inputValue);
+            });
+
+            if (showCancelButton) {
+                modalCancelBtnEl.addEventListener('click', () => {
+                    hideModal();
+                    onCancel();
+                });
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        // --- AUTH & SESSION ---
+        onAuthStateChanged(auth, (user) => {
+            if (!initialLoading.classList.contains('hidden')) {
+                initialLoading.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+            }
+
+            if (user && user.displayName) {
+                currentUser = user;
+                userInfoName.textContent = user.displayName;
+                loginView.classList.add('hidden');
+                showDashboard();
+            } else {
+                currentUser = null;
+                topBanner.classList.add('hidden');
+                dashboardView.classList.add('hidden');
+                editorView.classList.add('hidden');
+                loginView.classList.remove('hidden');
+            }
+        });
+
+        async function handleRegistration(username, password) {
+            const email = `${username.toLowerCase()}@weberia.app`;
+            const usernameRef = ref(db, `usernames/${username.toLowerCase()}`);
+            const snapshot = await get(usernameRef);
+            if (snapshot.exists()) {
+                showCustomAlert({ title: 'Error de Registro', message: 'Este nombre de usuario ya está en uso.', showCancelButton: false, confirmText: 'OK' });
+                return;
+            }
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                await updateProfile(user, { displayName: username });
+                const updates = {};
+                updates[`/users/${user.uid}/profile`] = { displayName: username, createdAt: new Date().toISOString() };
+                updates[`/usernames/${username.toLowerCase()}`] = user.uid;
+                await update(ref(db), updates);
+            } catch (error) {
+                console.error("Error during registration:", error);
+                const message = error.code === 'auth/weak-password' 
+                                ? 'La contraseña debe tener al menos 6 caracteres.'
+                                : 'Ocurrió un error durante el registro.';
+                showCustomAlert({ title: 'Error de Registro', message, showCancelButton: false, confirmText: 'OK' });
+            }
+        }
+        
+        async function handleLogin(username, password) {
+            const email = `${username.toLowerCase()}@weberia.app`;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                 console.error("Error during login:", error);
+                const message = (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') 
+                                ? 'Usuario o contraseña incorrectos.'
+                                : 'Ocurrió un error al iniciar sesión.';
+                showCustomAlert({ title: 'Error de Inicio de Sesión', message, showCancelButton: false, confirmText: 'OK' });
+            }
+        }
+
+        function handleLogout() {
+            signOut(auth).catch((error) => {
+                console.error("Error signing out:", error);
+            });
+        }
+
+        function toggleAuthForm() {
+            isLoginMode = !isLoginMode;
+            if (isLoginMode) {
+                authTitle.textContent = 'Iniciar Sesión';
+                authButton.textContent = 'Acceder';
+                toggleAuthMode.innerHTML = '¿No tienes cuenta? <span class="font-bold">Regístrate</span>';
+            } else {
+                authTitle.textContent = 'Crear Cuenta';
+                authButton.textContent = 'Registrarse';
+                toggleAuthMode.innerHTML = '¿Ya tienes cuenta? <span class="font-bold">Inicia Sesión</span>';
+            }
+        }
+        
+        function cleanupListeners() {
+            unsubscribeListeners.forEach(unsubscribe => unsubscribe());
+            unsubscribeListeners = [];
+        }
+
+        // --- VIEW MANAGEMENT ---
+        function showDashboard() {
+            cleanupListeners();
+            topBanner.classList.remove('hidden');
+            appContainer.style.height = 'calc(100vh - 60px)';
+            dashboardView.classList.remove('hidden');
+            editorView.classList.add('hidden');
+            currentProgramId = null;
+            if (monacoEditor) {
+                monacoEditor.dispose();
+                monacoEditor = null;
+            }
+            loadPrograms();
+        }
+
+        async function showEditor(programId, ownerId) {
+            if (!currentUser) return;
+            cleanupListeners();
+            topBanner.classList.add('hidden');
+            appContainer.style.height = '100vh';
+            dashboardView.classList.add('hidden');
+            editorView.classList.remove('hidden');
+            currentProgramId = programId;
+            currentProgramOwner = ownerId;
+            
+            try {
+                const programRef = ref(db, `users/${ownerId}/projects/${programId}`);
+                const snapshot = await get(programRef);
+
+                if (snapshot.exists()) {
+                    const programData = snapshot.val();
+                    editorTitle.textContent = programData.name;
+                    currentProgramLanguage = programData.language;
+                    
+                    previewNewTabBtn.classList.toggle('hidden', currentProgramLanguage !== 'html');
+                    
+                    aiConversationHistory = [{
+                        role: "system",
+                        content: isAiDiffModeEnabled ? SYSTEM_PROMPT_DIFF : getSystemPromptReplace(currentProgramLanguage)
+                    }];
+
+                    previewContainer.style.display = programData.language === 'html' ? 'block' : 'none';
+                    editorContainer.style.width = programData.language === 'html' ? '50%' : '100%';
+
+                    initializeEditor(programData.code, programData.language);
+
+                    const unsubscribe = onValue(programRef, (liveSnapshot) => {
+                        const liveData = liveSnapshot.val();
+                        if (liveData && monacoEditor && liveData.lastEditor !== currentUser.uid && monacoEditor.getValue() !== liveData.code) {
+                            const currentPosition = monacoEditor.getPosition();
+                            monacoEditor.setValue(liveData.code);
+                            monacoEditor.setPosition(currentPosition);
+                        }
+                    });
+                    unsubscribeListeners.push(unsubscribe);
+
+                } else {
+                    showCustomAlert({ title: 'Error', message: 'El proyecto no fue encontrado o ha sido eliminado.', showCancelButton: false, confirmText: 'OK' });
+                    showDashboard();
+                }
+            } catch (error) {
+                console.error("Error loading program:", error);
+                showDashboard();
+            }
+        }
+
+        // --- DATABASE HANDLING ---
+        function loadPrograms() {
+            cleanupListeners();
+            if (activeTab === 'my') {
+                loadMyProjects();
+            } else {
+                loadSharedProjects();
+            }
+        }
+
+        function loadMyProjects() {
+            if (!currentUser) return;
+            const programsRef = ref(db, `users/${currentUser.uid}/projects`);
+            const unsubscribe = onValue(programsRef, (snapshot) => {
+                renderProgramList(snapshot.val(), currentUser.uid);
+            });
+            unsubscribeListeners.push(unsubscribe);
+        }
+
+        async function loadSharedProjects() {
+            if (!currentUser) return;
+            const sharedRef = ref(db, `sharedWith/${currentUser.uid}`);
+            const unsubscribe = onValue(sharedRef, async (snapshot) => {
+                const sharedData = snapshot.val();
+                if (!sharedData) {
+                    programsList.innerHTML = `<p class="text-gray-400 col-span-full text-center">Nadie ha compartido proyectos contigo todavía.</p>`;
+                    return;
+                }
+
+                const projectPromises = Object.keys(sharedData).map(async (projectId) => {
+                    const ownerId = sharedData[projectId].owner;
+                    const projectRef = ref(db, `users/${ownerId}/projects/${projectId}`);
+                    const projectSnapshot = await get(projectRef);
+                    if (projectSnapshot.exists()) {
+                        return { ...projectSnapshot.val(), id: projectId, owner: ownerId };
+                    }
+                    return null;
+                });
+
+                const projectsArray = (await Promise.all(projectPromises)).filter(p => p);
+                const projects = projectsArray.reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+                renderProgramList(projects, null);
+            });
+            unsubscribeListeners.push(unsubscribe);
+        }
+
+        function renderProgramList(data, ownerId) {
+            programsList.innerHTML = '';
+            if (!data) {
+                const message = activeTab === 'my' ? 'No has creado ningún proyecto todavía.' : 'No hay proyectos compartidos.';
+                programsList.innerHTML = `<p class="text-gray-400 col-span-full text-center">${message}</p>`;
+                return;
+            }
+            Object.entries(data).forEach(([programId, program]) => {
+                const projectOwnerId = ownerId || program.owner;
+                const card = document.createElement('div');
+                card.className = 'bg-gray-800 rounded-xl p-4 shadow-lg transform hover:scale-105 transition-transform duration-300 flex flex-col justify-between';
+                card.dataset.programId = programId;
+                card.dataset.owner = projectOwnerId;
+
+                card.innerHTML = `
+                    <div class="cursor-pointer flex-grow">
+                        <h3 class="text-lg font-bold text-white truncate">${program.name}</h3>
+                        <span class="text-sm font-mono bg-blue-900/50 text-blue-300 px-2 py-1 rounded">${program.language}</span>
+                        <p class="text-xs text-gray-400 mt-2">Creador: ${program.ownerName || 'Desconocido'}</p>
+                    </div>
+                    <div class="mt-4 flex justify-end items-center gap-2">
+                        ${projectOwnerId === currentUser?.uid ? `<button class="share-btn text-blue-400 hover:text-blue-600 transition-colors"><span class="material-symbols-outlined">share</span></button>` : ''}
+                        ${projectOwnerId === currentUser?.uid ? `<button class="delete-btn text-red-400 hover:text-red-600 transition-colors"><span class="material-symbols-outlined">delete</span></button>` : ''}
+                    </div>
+                `;
+                programsList.appendChild(card);
+            });
+        }
+        
+        function shareProject(programId, ownerId) {
+            showCustomAlert({
+                title: 'Compartir Proyecto',
+                message: 'Introduce el nombre de usuario para compartir:',
+                showInput: true,
+                placeholder: 'Nombre de usuario',
+                confirmText: 'Compartir',
+                onConfirm: async (targetUsername) => {
+                    if (targetUsername && targetUsername.trim() !== "") {
+                        try {
+                            const usernameRef = ref(db, `usernames/${targetUsername.trim().toLowerCase()}`);
+                            const snapshot = await get(usernameRef);
+                            
+                            if (!snapshot.exists()) {
+                                showCustomAlert({ title: 'Error', message: 'Usuario no encontrado.', showCancelButton: false, confirmText: 'OK' });
+                                return;
+                            }
+                            
+                            const targetUserId = snapshot.val();
+                            const shareRef = ref(db, `sharedWith/${targetUserId}/${programId}`);
+                            await set(shareRef, { owner: ownerId });
+                            
+                            showCustomAlert({
+                                title: 'Éxito',
+                                message: `Proyecto compartido con ${targetUsername.trim()}!`,
+                                showCancelButton: false,
+                                confirmText: 'OK'
+                            });
+                        } catch (error) {
+                            console.error("Error sharing project:", error);
+                            showCustomAlert({
+                                title: 'Error',
+                                message: 'No se pudo compartir el proyecto.',
+                                showCancelButton: false,
+                                confirmText: 'OK'
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        async function createProgram(name, language) {
+            if (!currentUser) return;
+            const boilerplate = {
+                html: `<!DOCTYPE html>\n<html>\n<head>\n  <title>${name}</title>\n</head>\n<body>\n  <h1>Hola, mundo!</h1>\n</body>\n</html>`,
+                javascript: `console.log("Hola, ${name}!");`,
+                css: `body {\n  font-family: sans-serif;\n}`,
+                python: `def main():\n    print("Hola, ${name}!")\n\nif __name__ == "__main__":\n    main()`,
+                markdown: `# ${name}\n\nEste es un nuevo proyecto.`
+            };
+            try {
+                const programsRef = ref(db, `users/${currentUser.uid}/projects`);
+                const newProgramRef = push(programsRef);
+                await set(newProgramRef, {
+                    name: name,
+                    language: language,
+                    code: boilerplate[language] || '',
+                    createdAt: new Date().toISOString(),
+                    owner: currentUser.uid,
+                    ownerName: currentUser.displayName,
+                    lastEditor: currentUser.uid
+                });
+                showEditor(newProgramRef.key, currentUser.uid);
+            } catch (error) {
+                console.error("Error creating program:", error);
+            }
+        }
+
+        async function deleteProgram(programId) {
+            if (!currentUser) return;
+            try {
+                const programRef = ref(db, `users/${currentUser.uid}/projects/${programId}`);
+                await remove(programRef);
+        
+                const sharedRef = ref(db, 'sharedWith');
+                const sharedSnapshot = await get(sharedRef);
+                if (sharedSnapshot.exists()) {
+                    const updates = {};
+                    Object.keys(sharedSnapshot.val()).forEach(userId => {
+                        if (sharedSnapshot.val()[userId][programId]) {
+                            updates[`/sharedWith/${userId}/${programId}`] = null;
+                        }
+                    });
+                    if (Object.keys(updates).length > 0) {
+                        await update(ref(db), updates);
+                    }
+                }
+        
+                console.log("Program deleted successfully");
+            } catch (error) {
+                console.error("Error deleting program:", error);
+                showCustomAlert({ 
+                    title: 'Error', 
+                    message: 'No se pudo eliminar el proyecto. Verifica tus permisos.', 
+                    showCancelButton: false, 
+                    confirmText: 'OK' 
+                });
+            }
+        }
+
+        function saveCode(code) {
+            if (!currentUser || !currentProgramId || !currentProgramOwner) return;
+            
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(async () => {
+                try {
+                    const programRef = ref(db, `users/${currentProgramOwner}/projects/${currentProgramId}`);
+                    await update(programRef, { 
+                        code: code,
+                        lastEditor: currentUser.uid
+                    });
+                    console.log("Code saved for", currentProgramId);
+                } catch (error) {
+                    console.error("Error saving code:", error);
+                }
+            }, 500);
+        }
+
+        function saveCodeImmediately(code) {
+            if (!currentUser || !currentProgramId || !currentProgramOwner) return;
+            try {
+                const programRef = ref(db, `users/${currentProgramOwner}/projects/${currentProgramId}`);
+                update(programRef, {
+                    code: code,
+                    lastEditor: currentUser.uid
+                });
+            } catch (error) {
+                console.error("Error saving code immediately:", error);
+            }
+        }
+
+
+        // --- MONACO EDITOR ---
+        function initializeEditor(initialCode, language) {
+            if (monacoEditor) {
+                monacoEditor.dispose();
+            }
+            require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
+            require(['vs/editor/editor.main'], function() {
+                monacoEditor = monaco.editor.create(editorContainer, {
+                    value: initialCode,
+                    language: language,
+                    theme: 'vs-dark',
+                    automaticLayout: true,
+                    fontSize: 14,
+                    fontFamily: 'Hack',
+                    wordWrap: 'on',
+                    padding: { top: 16 }
+                });
+                updatePreview(initialCode);
+                monacoEditor.onDidChangeModelContent(() => {
+                    const currentCode = monacoEditor.getValue();
+                    if (!isAiEditing) {
+                        updatePreview(currentCode);
+                        saveCode(currentCode);
+                    }
+                });
+            });
+        }
+
+        function updatePreview(code) {
+             if (previewContainer.style.display !== 'none') {
+                 previewIframe.srcdoc = code;
+             }
+        }
+        
+        // --- AI INTEGRATION ---
+        function applyChanges(changes) {
+            let editorContent = monacoEditor.getValue();
+            changes.forEach(change => {
+                // This is a simple implementation and might fail if a line appears multiple times.
+                // It replaces the first occurrence it finds.
+                editorContent = editorContent.replace(change.originalLine, change.editedLine);
+            });
+            monacoEditor.setValue(editorContent);
+            saveCode(editorContent);
+        }
+
+        async function getAiEdit(prompt) {
+            if (!monacoEditor) return;
+
+            isAiEditing = true;
+            aiLoadingSpinner.classList.remove('hidden');
+            aiPromptInput.disabled = true;
+            const originalCode = monacoEditor.getValue();
+            let fullResponse = '';
+            let streamSaveInterval = null;
+
+            if (currentProgramLanguage === 'html') {
+                previewIframe.src = 'https://weberia.neocities.org/thinking';
+            }
+
+            // Update system prompt based on mode
+            aiConversationHistory[0].content = isAiDiffModeEnabled ? SYSTEM_PROMPT_DIFF : getSystemPromptReplace(currentProgramLanguage);
+            
+            const userMessage = `Aquí está el código:\n\n${originalCode}\n\nMi petición es: ${prompt}`;
+            aiConversationHistory.push({ role: "user", content: userMessage });
+            
+            const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
+            const MISTRAL_API_KEY = 'o0kW3QDl3KG9HXPbxqSsuYJqJiXVfOsU';
+            const maxRetries = 500;
+
+            try {
+                let response;
+                for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                    response = await fetch(MISTRAL_API_URL, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${MISTRAL_API_KEY}`
+                        },
+                        body: JSON.stringify({
+                            model: 'mistral-medium-latest',
+                            messages: aiConversationHistory,
+                            stream: true
+                        })
+                    });
+
+                    if (response.status === 429) {
+                        if (attempt === maxRetries) throw new Error("La API está sobrecargada. Por favor, inténtalo de nuevo más tarde.");
+                        console.log(`API rate limit hit. Retrying in 3 seconds... (Attempt ${attempt}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                        continue;
+                    }
+                    
+                    if (!response.ok) {
+                        const errorBody = await response.json().catch(() => ({ message: 'Error desconocido' }));
+                        throw new Error(`HTTP error! status: ${response.status} - ${errorBody.message}`);
+                    }
+                    
+                    break;
+                }
+
+                if (!isAiDiffModeEnabled) {
+                    streamSaveInterval = setInterval(() => {
+                        if (monacoEditor) saveCodeImmediately(monacoEditor.getValue());
+                    }, 500);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                if (!isAiDiffModeEnabled) monacoEditor.setValue('');
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const jsonStr = line.substring(6);
+                            if (jsonStr.trim() === '[DONE]') break;
+                            
+                            try {
+                                const parsed = JSON.parse(jsonStr);
+                                const contentChunk = parsed?.choices?.[0]?.delta?.content || '';
+                                if (contentChunk) {
+                                    fullResponse += contentChunk;
+                                    if (!isAiDiffModeEnabled) {
+                                        monacoEditor.setValue(fullResponse);
+                                        const lineCount = monacoEditor.getModel().getLineCount();
+                                        const lastLineLength = monacoEditor.getModel().getLineMaxColumn(lineCount);
+                                        monacoEditor.setPosition({ lineNumber: lineCount, column: lastLineLength });
+                                        monacoEditor.revealPosition({ lineNumber: lineCount, column: 0 });
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn("Could not parse stream chunk:", jsonStr);
+                            }
+                        }
+                    }
+                }
+                
+                aiConversationHistory.push({ role: "assistant", content: fullResponse });
+
+                if (isAiDiffModeEnabled) {
+                    try {
+                        // Clean the response from markdown fences before parsing
+                        let cleanedResponse = fullResponse.trim();
+                        if (cleanedResponse.startsWith('```json')) {
+                            cleanedResponse = cleanedResponse.substring(7, cleanedResponse.length - 3).trim();
+                        } else if (cleanedResponse.startsWith('```')) {
+                            cleanedResponse = cleanedResponse.substring(3, cleanedResponse.length - 3).trim();
+                        }
+
+                        const changes = JSON.parse(cleanedResponse);
+                        if (Array.isArray(changes)) {
+                            showCustomAlert({
+                                title: 'Sugerencias de Cambios',
+                                message: 'La IA ha propuesto los siguientes cambios. ¿Quieres aplicarlos?',
+                                confirmText: 'Aprobar',
+                                cancelText: 'Rechazar',
+                                diffChanges: changes,
+                                onConfirm: () => applyChanges(changes)
+                            });
+                        } else {
+                            throw new Error("La respuesta de la IA no es un array JSON válido.");
+                        }
+                    } catch (e) {
+                        console.error("Error parsing AI diff response:", e);
+                        showCustomAlert({ title: 'Error de IA', message: 'La IA no devolvió un formato de cambios válido.', showCancelButton: false });
+                    }
+                } else {
+                    // Ya no se quitan los ```, se muestra la respuesta completa de la IA.
+                    monacoEditor.setValue(fullResponse);
+                }
+
+            } catch (error) {
+                console.error("Error fetching AI edit from Mistral:", error);
+                showCustomAlert({ title: 'Error de IA', message: `No se pudo obtener la respuesta de la IA. ${error.message}`, showCancelButton: false, confirmText: 'Entendido' });
+                monacoEditor.setValue(originalCode);
+                aiConversationHistory.pop(); // Remove failed user message
+            } finally {
+                if (streamSaveInterval) clearInterval(streamSaveInterval);
+                
+                if (monacoEditor && !isAiDiffModeEnabled) {
+                   saveCode(monacoEditor.getValue());
+                }
+
+                aiLoadingSpinner.classList.add('hidden');
+                aiPromptInput.disabled = false;
+                aiPromptInput.value = '';
+                isAiEditing = false;
+                if(previewContainer.style.display !== 'none') {
+                    updatePreview(monacoEditor.getValue());
+                }
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            if (!username || !password) {
+                showCustomAlert({title: 'Campos incompletos', message: 'Por favor, introduce usuario y contraseña.', showCancelButton: false, confirmText: 'OK'});
+                return;
+            }
+            if (isLoginMode) handleLogin(username, password);
+            else handleRegistration(username, password);
+        });
+        
+        toggleAuthMode.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleAuthForm();
+        });
+
+        logoutBtn.addEventListener('click', handleLogout);
+
+        createProgramForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('program-name').value;
+            const language = document.getElementById('program-language').value;
+            createProgram(name, language);
+            createProgramForm.reset();
+        });
+
+        backToDashboardBtn.addEventListener('click', showDashboard);
+
+        aiPromptInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && aiPromptInput.value.trim() !== '') getAiEdit(aiPromptInput.value.trim());
+        });
+
+        myProjectsTab.addEventListener('click', () => {
+            activeTab = 'my';
+            myProjectsTab.classList.add('tab-active');
+            sharedProjectsTab.classList.remove('tab-active');
+            loadPrograms();
+        });
+
+        sharedProjectsTab.addEventListener('click', () => {
+            activeTab = 'shared';
+            sharedProjectsTab.classList.add('tab-active');
+            myProjectsTab.classList.remove('tab-active');
+            loadPrograms();
+        });
+
+        previewNewTabBtn.addEventListener('click', async () => {
+            if (monacoEditor && currentProgramLanguage === 'html') {
+                const htmlContent = monacoEditor.getValue();
+                const shortCode = Math.random().toString(36).substring(2, 8);
+                
+                try {
+                    const previewRef = ref(db, `previews/${shortCode}`);
+                    await set(previewRef, {
+                        html: htmlContent,
+                        createdAt: new Date().toISOString()
+                    });
+                    const url = `https://logise.netlify.app/preview?doc=${shortCode}`;
+                    window.open(url, '_blank');
+                } catch (error) {
+                    console.error("Error creating preview:", error);
+                    showCustomAlert({
+                        title: 'Error de Vista Previa',
+                        message: 'No se pudo generar el enlace de la vista previa.',
+                        showCancelButton: false,
+                        confirmText: 'OK'
+                    });
+                }
+            }
+        });
+
+        aiSettingsToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            aiSettingsDropdown.classList.toggle('hidden');
+        });
+
+        aiDiffModeCheckbox.addEventListener('change', (e) => {
+            isAiDiffModeEnabled = e.target.checked;
+            console.log("AI Diff Mode Enabled:", isAiDiffModeEnabled);
+            // Update the system prompt for the current session if a project is open
+            if (currentProgramLanguage) {
+                 aiConversationHistory[0].content = isAiDiffModeEnabled ? SYSTEM_PROMPT_DIFF : getSystemPromptReplace(currentProgramLanguage);
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!aiSettingsToggle.contains(e.target) && !aiSettingsDropdown.contains(e.target)) {
+                aiSettingsDropdown.classList.add('hidden');
+            }
+        });
+
+        programsList.addEventListener('click', (e) => {
+            const target = e.target;
+            const card = target.closest('[data-program-id]');
+            if (!card) return;
+
+            const programId = card.dataset.programId;
+            const ownerId = card.dataset.owner;
+
+            if (target.closest('.delete-btn')) {
+                e.stopPropagation();
+                showCustomAlert({
+                    title: 'Confirmar Eliminación',
+                    message: `¿Estás seguro de que quieres eliminar este proyecto? Esta acción no se puede deshacer.`,
+                    confirmText: 'Eliminar',
+                    onConfirm: () => deleteProgram(programId)
+                });
+                return;
+            }
+
+            if (target.closest('.share-btn')) {
+                e.stopPropagation();
+                shareProject(programId, ownerId);
+                return;
+            }
+            
+            showEditor(programId, ownerId);
+        });
+
+    </script>
+</body>
+</html>
+
