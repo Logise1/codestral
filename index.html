@@ -809,8 +809,8 @@
             const userMessage = `Aquí está el código:\n\n${originalCode}\n\nMi petición es: ${prompt}`;
             aiConversationHistory.push({ role: "user", content: userMessage });
             
-            const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
-            const MISTRAL_API_KEY = 'o0kW3QDl3KG9HXPbxqSsuYJqJiXVfOsU';
+            const MISTRAL_API_URL = 'https://text.pollinations.ai/openai?token=25eMuLLjvFlPA9iw';
+            const MISTRAL_API_KEY = '25eMuLLjvFlPA9iw';
             const maxRetries = 500;
 
             try {
@@ -823,7 +823,7 @@
                             'Authorization': `Bearer ${MISTRAL_API_KEY}`
                         },
                         body: JSON.stringify({
-                            model: 'mistral-medium-latest',
+                            model: 'deepseek-reasoning',
                             messages: aiConversationHistory,
                             stream: true
                         })
