@@ -95,11 +95,12 @@
         
         /* Drive Grid Styles */
         .drive-grid {
+            /* Asegura que el grid ocupe el 100% de la altura de su contenedor flex para que el overflow-y funcione. */
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 1rem;
             padding: 1rem;
-            overflow-y: auto;
+            overflow-y: auto; /* Habilitar scroll vertical */
             height: 100%;
         }
 
@@ -557,6 +558,7 @@
                 monacoEditor = null;
             }
             
+            currentProgramId = null; // Clear active program ID
             currentFolderId = 'root';
             breadcrumbPath = [{ id: 'root', name: 'Inicio' }];
             activeTab = 'my';
@@ -606,10 +608,11 @@
             // Use onValue to get real-time updates
             onValue(foldersRef, (snapF) => {
                 cachedFolders = snapF.val() || {};
+                // Nested onValue for projects ensures we have both caches before rendering.
                 onValue(projectsRef, (snapP) => {
                     cachedProjects = snapP.val() || {};
                     renderGrid();
-                }, { onlyOnce: true }); // optimize nesting
+                }, { onlyOnce: true }); // optimize nesting, though for real-time app, often removed.
             });
         }
 
@@ -760,6 +763,9 @@
                     updates[`users/${currentUser.uid}/folders/${data.id}/parentId`] = targetFolderId;
                     await update(ref(db), updates);
                 }
+                // FIX: Re-render the grid to reflect the change immediately
+                renderGrid();
+
             } catch (err) {
                 console.error("Drop Error", err);
             }
