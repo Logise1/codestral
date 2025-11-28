@@ -1023,6 +1023,13 @@
                             }
                         }
                     }
+                    
+                    // FIX: Ensure the final, complete content is set after the stream ends 
+                    // (only in non-diff/replace mode, as diff mode uses a modal).
+                    if (!isDiff) {
+                        const cleanedFinalContent = fullContent.replace(/```[a-z]*\n?|```/g, '').trim();
+                        monacoEditor.setValue(cleanedFinalContent);
+                    }
 
                     // Final processing
                     if (isDiff) {
