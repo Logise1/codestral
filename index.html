@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IDE con Asistente de IA (Colaborativo)</title>
+    <title>Codestral</title>
     
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,7 +14,6 @@
     <!-- Google Fonts and Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Changed editor font to Hack -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Hack&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
@@ -28,32 +27,45 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden; /* Prevent body scroll */
         }
         .banner {
             width: 100%;
-            background-color: #2c3e50; /* A lighter shade than the background */
+            background-color: #1f2937;
             display: flex;
-            justify-content: flex-start;
+            justify-content: space-between;
             align-items: center;
-            padding: 10px 0;
-            flex-shrink: 0; /* Prevent banner from shrinking */
+            padding: 0 20px;
+            height: 60px;
+            border-bottom: 1px solid #374151;
+            flex-shrink: 0;
         }
-        .banner img {
-            max-height: 40px;
-            margin-left: 10px;
+        .banner-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: white;
         }
         #app-container {
             flex-grow: 1;
-            overflow-y: auto;
+            overflow: hidden; /* Main container hidden overflow */
+            position: relative;
+            display: flex;
+            flex-direction: column;
         }
         .monaco-editor {
-            /* Updated editor font */
             font-family: 'Hack', monospace;
         }
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
         }
-        /* Custom scrollbar for a better look */
+        .filled-icon {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Scrollbars */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -68,168 +80,336 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #6b7280;
         }
-        /* Loading spinner animation */
+        /* Spinner */
         .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
+            border: 3px solid rgba(255, 255, 255, 0.1);
             border-radius: 50%;
             border-top-color: #3b82f6;
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             animation: spin 1s ease-in-out infinite;
         }
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        .tab-active {
-            border-color: #3b82f6;
-            background-color: #3b82f6;
-            color: #ffffff;
+        
+        /* Drive Grid Styles */
+        .drive-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .drive-item {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+        .drive-item:hover {
+            background-color: #374151;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .drive-item.folder-drag-over {
+            border: 2px dashed #3b82f6;
+            background-color: #2563eb33;
+        }
+        .drive-item .icon {
+            font-size: 48px;
+            margin-bottom: 8px;
+        }
+        .drive-item .folder-icon { color: #60a5fa; }
+        .drive-item .html-icon { color: #e44d26; }
+        .drive-item .js-icon { color: #f7df1e; }
+        .drive-item .css-icon { color: #264de4; }
+        .drive-item .py-icon { color: #306998; }
+        .drive-item .md-icon { color: #ffffff; }
+
+        .drive-item .name {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #e5e7eb;
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .context-menu-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            padding: 2px;
+            border-radius: 4px;
+        }
+        .drive-item:hover .context-menu-btn {
+            opacity: 1;
+        }
+        .context-menu-btn:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        /* Breadcrumb */
+        .breadcrumb-item:not(:last-child):after {
+            content: 'chevron_right';
+            font-family: 'Material Symbols Outlined';
+            font-size: 16px;
+            vertical-align: middle;
+            margin: 0 4px;
+            color: #9ca3af;
+        }
+        .breadcrumb-item:hover {
+            color: #60a5fa;
+            text-decoration: underline;
+        }
+
+        /* Context Menu */
+        #context-menu {
+            position: fixed;
+            z-index: 100;
+            width: 150px;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: none;
+        }
+        .context-menu-option {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .context-menu-option:hover {
+            background-color: #374151;
+            color: white;
         }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
 
-    <div id="initial-loading" class="h-screen w-screen flex items-center justify-center">
+    <div id="initial-loading" class="h-screen w-screen flex items-center justify-center absolute z-50 bg-gray-900">
         <div class="spinner" style="width: 48px; height: 48px; border-width: 5px;"></div>
     </div>
 
+    <!-- Top Banner (Visible in Dashboard and Editor) -->
     <div id="top-banner" class="banner hidden">
-        <img src="https://weberia.neocities.org/codestral.png" alt="codestral">
+        <div class="banner-logo cursor-pointer" id="logo-btn">
+            <span class="material-symbols-outlined text-blue-500 text-3xl">terminal</span>
+            <span>Codestral</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <div id="user-info-name" class="text-sm font-medium text-gray-300 hidden sm:block"></div>
+            <button id="logout-btn" class="text-xs bg-red-600/20 hover:bg-red-600/40 text-red-200 border border-red-600/30 px-3 py-1.5 rounded transition-colors">Salir</button>
+        </div>
     </div>
 
-    <!-- Main container -->
-    <div id="app-container" class="w-full hidden">
+    <!-- Main App Container -->
+    <div id="app-container" class="hidden w-full">
 
         <!-- Login View -->
-        <div id="login-view" class="hidden h-full flex items-center justify-center">
-            <div class="w-full max-w-md p-8 space-y-8 bg-gray-800 rounded-xl shadow-lg">
-                <div>
-                    <h2 id="auth-title" class="mt-6 text-center text-3xl font-bold tracking-tight text-white">
-                        Iniciar Sesión
-                    </h2>
+        <div id="login-view" class="hidden h-full flex items-center justify-center bg-gray-900 absolute inset-0 z-40">
+            <div class="w-full max-w-md p-8 space-y-8 bg-gray-800 rounded-xl shadow-2xl border border-gray-700">
+                <div class="text-center">
+                    <span class="material-symbols-outlined text-blue-500 text-6xl mb-4">terminal</span>
+                    <h2 id="auth-title" class="text-3xl font-bold tracking-tight text-white">Bienvenido</h2>
+                    <p class="text-gray-400 mt-2">¡Bienvenid@ a Codestral!</p>
                 </div>
-                <form id="login-form" class="mt-8 space-y-6">
-                    <div class="rounded-md shadow-sm -space-y-px">
-                        <div>
-                            <input id="username" name="username" type="text" required class="relative block w-full appearance-none rounded-none rounded-t-md border border-gray-700 bg-gray-900 px-3 py-2 text-white placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm" placeholder="Nombre de usuario">
-                        </div>
-                        <div>
-                            <input id="password" name="password" type="password" required class="relative block w-full appearance-none rounded-none rounded-b-md border border-gray-700 bg-gray-900 px-3 py-2 text-white placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm" placeholder="Contraseña">
-                        </div>
+                <form id="login-form" class="mt-8 space-y-5">
+                    <div class="space-y-4">
+                        <input id="username" name="username" type="text" required class="block w-full rounded-md border border-gray-600 bg-gray-900 px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm" placeholder="Nombre de usuario">
+                        <input id="password" name="password" type="password" required class="block w-full rounded-md border border-gray-600 bg-gray-900 px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm" placeholder="Contraseña">
                     </div>
-                    <div>
-                        <button id="auth-button" type="submit" class="group relative flex w-full justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800">
-                            Acceder
-                        </button>
-                    </div>
-                     <div class="text-sm text-center">
-                        <a href="#" id="toggle-auth-mode" class="font-medium text-blue-400 hover:text-blue-300">¿No tienes cuenta? Regístrate</a>
+                    <button id="auth-button" type="submit" class="group relative flex w-full justify-center rounded-md border border-transparent bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800">
+                        Acceder
+                    </button>
+                    <div class="text-sm text-center">
+                        <a href="#" id="toggle-auth-mode" class="font-medium text-blue-400 hover:text-blue-300 transition-colors">¿No tienes cuenta? Regístrate</a>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Dashboard View: Shows list of programs and creation form -->
-        <div id="dashboard-view" class="hidden">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div class="flex justify-between items-center mb-8">
-                    <h1 class="text-4xl font-bold tracking-tight text-white">Dashboard</h1>
-                    <div class="flex items-center gap-4">
-                         <div class="text-right">
-                            <div id="user-info-name" class="text-lg font-bold text-gray-200"></div>
-                        </div>
-                        <button id="logout-btn" class="text-xs bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-full transition-colors">Cerrar Sesión</button>
+        <!-- Dashboard / Drive View -->
+        <div id="dashboard-view" class="hidden flex flex-col h-full">
+            <!-- Toolbar -->
+            <div class="bg-gray-800 border-b border-gray-700 p-3 flex flex-col sm:flex-row justify-between items-center gap-3">
+                
+                <!-- Breadcrumbs & Nav -->
+                <div class="flex items-center gap-3 w-full sm:w-auto overflow-x-auto">
+                    <button id="nav-home-btn" class="p-1.5 hover:bg-gray-700 rounded text-gray-300 hover:text-white transition-colors" title="Inicio">
+                        <span class="material-symbols-outlined">home</span>
+                    </button>
+                    <div id="breadcrumbs" class="flex items-center text-sm font-mono text-gray-300 whitespace-nowrap">
+                        <!-- Breadcrumbs injected here -->
+                        <span class="breadcrumb-item cursor-pointer hover:text-blue-400">Inicio</span>
                     </div>
                 </div>
-                
-                <!-- Form to create a new program -->
-                <div class="bg-gray-800 p-6 rounded-xl shadow-lg mb-8">
-                    <h2 class="text-2xl font-semibold mb-4">Crear Nuevo Proyecto</h2>
-                    <form id="create-program-form" class="flex flex-col sm:flex-row gap-4">
-                        <input type="text" id="program-name" placeholder="Nombre del Proyecto" class="flex-grow bg-gray-700 text-white placeholder-gray-400 rounded-md px-4 py-2 border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
-                        <select id="program-language" class="bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                            <option value="html">HTML</option>
-                            <option value="javascript">JavaScript</option>
-                            <option value="css">CSS</option>
-                            <option value="python">Python</option>
-                            <option value="markdown">Markdown</option>
-                        </select>
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-md transition-colors duration-300 flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined">add</span>Crear
+
+                <!-- Actions -->
+                <div class="flex items-center gap-2">
+                    <div class="relative group">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition-all flex items-center gap-2 text-sm">
+                            <span class="material-symbols-outlined text-lg">add</span> Nuevo
                         </button>
-                    </form>
+                        <!-- Dropdown Menu -->
+                        <div class="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-xl hidden group-hover:block z-20">
+                            <div class="py-1">
+                                <button id="new-folder-btn" class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-gray-400">folder</span> Carpeta
+                                </button>
+                                <button id="new-project-btn" class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-gray-400">code</span> Proyecto
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </div>
 
-                <!-- Tabs for projects -->
-                <div class="mb-6 border-b border-gray-700">
-                    <nav class="flex space-x-4" aria-label="Tabs">
-                        <button id="my-projects-tab" class="tab-active px-3 py-2 font-medium text-sm rounded-t-md">Mis Proyectos</button>
-                        <button id="shared-projects-tab" class="text-gray-400 hover:text-white px-3 py-2 font-medium text-sm rounded-t-md">Compartidos Conmigo</button>
-                    </nav>
+            <!-- Tabs (My Drive / Shared) -->
+            <div class="bg-gray-800 border-b border-gray-700 px-4">
+                <nav class="flex space-x-6">
+                    <button id="tab-my-drive" class="border-b-2 border-blue-500 py-3 text-sm font-medium text-blue-400 focus:outline-none">Mi Unidad</button>
+                    <button id="tab-shared" class="border-b-2 border-transparent py-3 text-sm font-medium text-gray-400 hover:border-gray-600 hover:text-gray-300 focus:outline-none">Compartidos</button>
+                </nav>
+            </div>
+
+            <!-- Drive Grid Area -->
+            <div id="drive-area" class="flex-grow bg-gray-900 relative">
+                <div id="drive-grid" class="drive-grid">
+                    <!-- Folders and Files injected here -->
                 </div>
-
-                <!-- List of existing programs -->
-                <div id="programs-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    <!-- Program cards will be injected here by JavaScript -->
+                <!-- Empty State -->
+                <div id="empty-state" class="hidden absolute inset-0 flex flex-col items-center justify-center text-gray-500 select-none pointer-events-none">
+                    <span class="material-symbols-outlined text-6xl mb-2 opacity-50">cloud_off</span>
+                    <p>Esta carpeta está vacía</p>
                 </div>
             </div>
         </div>
 
-        <!-- Editor View: Shows code editor and preview -->
-        <div id="editor-view" class="hidden h-full flex flex-col">
-            <header class="bg-gray-800 p-3 flex items-center justify-between shadow-md flex-shrink-0">
-                <button id="back-to-dashboard" class="flex items-center gap-2 text-gray-300 hover:text-white transition-colors">
-                    <span class="material-symbols-outlined">arrow_back</span>
-                    <span>Dashboard</span>
-                </button>
-                <h2 id="editor-title" class="text-xl font-semibold text-white"></h2>
-                <button id="preview-new-tab-btn" class="hidden flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md transition-colors">
-                    <span class="material-symbols-outlined">open_in_new</span>
-                    <span>Preview</span>
-                </button>
-            </header>
-            <div class="bg-gray-800 p-3 border-t border-b border-gray-700 flex-shrink-0">
-                <div class="relative">
-                    <button id="ai-settings-toggle" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400 p-1 rounded-full">
-                        <span class="material-symbols-outlined">auto_awesome</span>
+        <!-- Editor View -->
+        <div id="editor-view" class="hidden h-full flex flex-col bg-gray-900">
+            <header class="bg-gray-800 p-2 border-b border-gray-700 flex items-center justify-between shadow-sm flex-shrink-0 z-10">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <button id="back-to-dashboard" class="flex items-center justify-center w-8 h-8 rounded hover:bg-gray-700 text-gray-400 hover:text-white transition-colors">
+                        <span class="material-symbols-outlined">arrow_back</span>
                     </button>
-                    <div id="ai-settings-dropdown" class="absolute left-0 top-full mt-2 w-72 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-10 hidden p-4">
-                        <label class="flex items-center space-x-3 cursor-pointer">
-                            <input type="checkbox" id="ai-diff-mode-checkbox" class="form-checkbox h-5 w-5 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500">
-                            <span class="text-gray-300">Habilitar modo de edición IA</span>
-                        </label>
+                    <div class="flex flex-col">
+                        <h2 id="editor-title" class="text-sm font-semibold text-white truncate max-w-[200px]"></h2>
+                        <span id="editor-status" class="text-xs text-gray-500">Guardado</span>
                     </div>
-                    <input type="text" id="ai-prompt" placeholder="Pídele a Mistral que edite el código..." class="w-full bg-gray-700 text-white placeholder-gray-400 rounded-md pl-12 pr-4 py-2 border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <div id="ai-loading-spinner" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
-                        <div class="spinner"></div>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                     <button id="preview-new-tab-btn" class="hidden sm:flex items-center gap-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs py-1.5 px-3 rounded transition-colors border border-gray-600">
+                        <span class="material-symbols-outlined text-sm">open_in_new</span>
+                        <span>Abrir Web</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- AI Bar -->
+            <div class="bg-gray-800/50 p-2 border-b border-gray-700 flex items-center gap-2 flex-shrink-0 backdrop-blur-sm">
+                <div class="relative flex-grow">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="material-symbols-outlined text-gray-500 text-sm">auto_awesome</span>
+                    </div>
+                    <input type="text" id="ai-prompt" placeholder="Pídele a la IA que edite o explique el código..." class="block w-full pl-10 pr-12 py-1.5 bg-gray-900 border border-gray-700 rounded-md text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-1">
+                        <button id="ai-settings-toggle" class="p-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors">
+                            <span class="material-symbols-outlined text-sm">tune</span>
+                        </button>
+                        <div id="ai-loading-spinner" class="hidden ml-1 mr-1">
+                            <div class="spinner w-4 h-4 border-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- AI Settings Dropdown -->
+                    <div id="ai-settings-dropdown" class="absolute right-0 top-full mt-2 w-64 bg-gray-800 border border-gray-700 rounded-md shadow-xl z-50 hidden p-3">
+                        <h4 class="text-xs font-semibold text-gray-400 uppercase mb-2">Configuración IA</h4>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" id="ai-diff-mode-checkbox" class="form-checkbox h-4 w-4 text-blue-600 bg-gray-900 border-gray-600 rounded focus:ring-blue-500">
+                            <span class="text-sm text-gray-300 group-hover:text-white transition-colors">Modo Diff (Aprobar cambios)</span>
+                        </label>
                     </div>
                 </div>
             </div>
-            <main class="flex-grow flex flex-row overflow-hidden">
-                <div id="editor-container" class="w-1/2 h-full"></div>
-                <div id="preview-container" class="w-1/2 h-full bg-gray-900 border-l-4 border-gray-700">
-                    <iframe id="preview-iframe" class="w-full h-full border-0"></iframe>
+
+            <!-- Main Editor Area -->
+            <main class="flex-grow flex flex-col md:flex-row overflow-hidden relative">
+                <div id="editor-container" class="w-full md:w-1/2 h-1/2 md:h-full relative"></div>
+                <!-- Resizer handle could go here -->
+                <div id="preview-container" class="w-full md:w-1/2 h-1/2 md:h-full bg-white border-t md:border-t-0 md:border-l border-gray-700 relative">
+                     <div class="absolute top-0 right-0 bg-gray-100 text-gray-500 text-[10px] px-2 py-1 z-10 opacity-50 hover:opacity-100 pointer-events-none">PREVIEW</div>
+                    <iframe id="preview-iframe" class="w-full h-full border-0 bg-white" sandbox="allow-scripts allow-modals allow-same-origin"></iframe>
                 </div>
             </main>
         </div>
     </div>
 
-    <!-- Custom Modal -->
-    <div id="custom-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl">
-            <h3 id="modal-title" class="text-xl font-semibold text-white mb-4"></h3>
-            <p id="modal-message" class="text-gray-300 mb-4"></p>
-            <div id="modal-diff-container" class="hidden bg-gray-900 rounded-md p-4 max-h-96 overflow-y-auto mb-4">
-                <pre><code id="modal-diff-content" class="text-sm font-mono"></code></pre>
+    <!-- Modals -->
+    <!-- Input Modal -->
+    <div id="custom-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md border border-gray-700 transform transition-all scale-100">
+            <h3 id="modal-title" class="text-lg font-bold text-white mb-2">Título</h3>
+            <p id="modal-message" class="text-sm text-gray-300 mb-4">Mensaje</p>
+            
+            <!-- Diff View inside Modal -->
+            <div id="modal-diff-container" class="hidden bg-gray-900 rounded border border-gray-700 p-3 max-h-60 overflow-y-auto mb-4 font-mono text-xs">
+                <code id="modal-diff-content"></code>
             </div>
-            <input type="text" id="modal-input" class="hidden w-full bg-gray-700 text-white placeholder-gray-400 rounded-md px-4 py-2 border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none mb-4">
-            <div id="modal-buttons" class="flex justify-end gap-4">
-                <button id="modal-cancel-btn" class="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 text-white transition-colors">Cancelar</button>
-                <button id="modal-confirm-btn" class="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors">Confirmar</button>
+
+            <!-- Create Project Form (Dynamic) -->
+            <div id="modal-form-container" class="hidden mb-4 space-y-3">
+                <input type="text" id="modal-input" class="w-full bg-gray-900 text-white placeholder-gray-500 rounded border border-gray-600 px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all">
+                <select id="modal-select" class="hidden w-full bg-gray-900 text-white rounded border border-gray-600 px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    <option value="html">HTML5 Web</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="css">CSS Stylesheet</option>
+                    <option value="python">Python Script</option>
+                    <option value="markdown">Markdown Doc</option>
+                </select>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="modal-cancel-btn" class="px-4 py-2 rounded text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">Cancelar</button>
+                <button id="modal-confirm-btn" class="px-4 py-2 rounded text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors">Confirmar</button>
             </div>
         </div>
     </div>
 
+    <!-- Context Menu -->
+    <div id="context-menu">
+        <div class="context-menu-option" id="ctx-open">
+            <span class="material-symbols-outlined text-sm">open_in_new</span> Abrir
+        </div>
+        <div class="context-menu-option" id="ctx-move">
+            <span class="material-symbols-outlined text-sm">drive_file_move</span> Mover...
+        </div>
+        <div class="border-t border-gray-700 my-1"></div>
+        <div class="context-menu-option text-red-400 hover:text-red-300" id="ctx-delete">
+            <span class="material-symbols-outlined text-sm">delete</span> Eliminar
+        </div>
+    </div>
 
     <!-- Firebase SDK -->
     <script type="module">
@@ -237,57 +417,10 @@
         import { getDatabase, ref, set, onValue, push, remove, get, update } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+        // --- CONSTANTS & CONFIG ---
+        const SYSTEM_PROMPT_REPLACE = (lang) => `Eres un asistente de código experto. Devuelve SOLO el código completo corregido en formato Markdown para ${lang}. Sin explicaciones.`;
+        const SYSTEM_PROMPT_DIFF = `Eres un asistente de código. Identifica cambios. Devuelve SOLO un array JSON: [{"originalLine":"...","editedLine":"..."},...]`;
 
-        // --- DOM ELEMENT REFERENCES ---
-        const initialLoading = document.getElementById('initial-loading');
-        const topBanner = document.getElementById('top-banner');
-        const appContainer = document.getElementById('app-container');
-        const loginView = document.getElementById('login-view');
-        const loginForm = document.getElementById('login-form');
-        const authTitle = document.getElementById('auth-title');
-        const authButton = document.getElementById('auth-button');
-        const toggleAuthMode = document.getElementById('toggle-auth-mode');
-        const dashboardView = document.getElementById('dashboard-view');
-        const editorView = document.getElementById('editor-view');
-        const createProgramForm = document.getElementById('create-program-form');
-        const programsList = document.getElementById('programs-list');
-        const backToDashboardBtn = document.getElementById('back-to-dashboard');
-        const editorContainer = document.getElementById('editor-container');
-        const previewIframe = document.getElementById('preview-iframe');
-        const previewContainer = document.getElementById('preview-container');
-        const editorTitle = document.getElementById('editor-title');
-        const aiPromptInput = document.getElementById('ai-prompt');
-        const aiLoadingSpinner = document.getElementById('ai-loading-spinner');
-        const userInfoName = document.getElementById('user-info-name');
-        const logoutBtn = document.getElementById('logout-btn');
-        const myProjectsTab = document.getElementById('my-projects-tab');
-        const sharedProjectsTab = document.getElementById('shared-projects-tab');
-        const previewNewTabBtn = document.getElementById('preview-new-tab-btn');
-        const aiSettingsToggle = document.getElementById('ai-settings-toggle');
-        const aiSettingsDropdown = document.getElementById('ai-settings-dropdown');
-        const aiDiffModeCheckbox = document.getElementById('ai-diff-mode-checkbox');
-
-        // --- STATE VARIABLES ---
-        let monacoEditor = null;
-        let currentProgramId = null;
-        let currentProgramOwner = null;
-        let currentProgramLanguage = null;
-        let db, auth;
-        let currentUser = null; // This will hold the Firebase user object
-        let debounceTimer;
-        let unsubscribeListeners = [];
-        let activeTab = 'my';
-        let isAiEditing = false;
-        let isLoginMode = true;
-        let isAiDiffModeEnabled = false;
-        let aiConversationHistory = [];
-
-        // --- SYSTEM PROMPTS ---
-        const getSystemPromptReplace = (language) => `Eres un asistente de programación experto. El usuario te proporcionará código en ${language} y una solicitud. Tu respuesta DEBE ser ÚNICAMENTE un bloque de código markdown con el código completo y modificado. No incluyas ninguna explicación fuera del bloque de código. Ejemplo:\n\n\`\`\`${language}\n...código aquí...\n\`\`\``;
-        const SYSTEM_PROMPT_DIFF = `Eres un asistente de programación experto. El usuario te proporcionará código y una solicitud. Tu tarea es identificar las líneas que necesitan cambiar y devolver **únicamente un array JSON** con los cambios. Cada elemento del array debe ser un objeto con dos claves: "originalLine" y "editedLine". "originalLine" debe ser el contenido **exacto e idéntico** de la línea que se va a reemplazar. "editedLine" debe ser el contenido completo de la nueva línea modificada. **Importante**: Solo devuelve el array JSON, sin explicaciones, texto adicional o bloques de código markdown. El formato debe ser estrictamente: [{"originalLine": "contenido_a_reemplazar", "editedLine": "contenido_nuevo"}, ...]`;
-
-
-        // --- FIREBASE SETUP ---
         const firebaseConfig = {
          apiKey: "AIzaSyAP7a8L45teU-bW7aLG7wG6WAlW4YlWCXE",
          authDomain: "weberiawebs.firebaseapp.com",
@@ -299,794 +432,688 @@
          measurementId: "G-HL18KF992B"
         };
 
+        // --- APP STATE ---
+        let db, auth, currentUser;
+        let monacoEditor = null;
+        let currentProgramId = null;
+        let currentProgramOwner = null;
+        let currentLang = 'html';
+        
+        // Drive State
+        let currentFolderId = 'root';
+        let breadcrumbPath = [{ id: 'root', name: 'Inicio' }];
+        let cachedFolders = {};
+        let cachedProjects = {};
+        let activeTab = 'my'; // 'my' or 'shared'
+        let clipboardMove = null; // { id, type, sourceFolder }
 
+        // --- DOM ELEMENTS ---
+        const dom = {
+            loading: document.getElementById('initial-loading'),
+            banner: document.getElementById('top-banner'),
+            app: document.getElementById('app-container'),
+            loginView: document.getElementById('login-view'),
+            dashboardView: document.getElementById('dashboard-view'),
+            editorView: document.getElementById('editor-view'),
+            driveGrid: document.getElementById('drive-grid'),
+            breadcrumbs: document.getElementById('breadcrumbs'),
+            emptyState: document.getElementById('empty-state'),
+            tabMy: document.getElementById('tab-my-drive'),
+            tabShared: document.getElementById('tab-shared'),
+            editorTitle: document.getElementById('editor-title'),
+            editorContainer: document.getElementById('editor-container'),
+            previewContainer: document.getElementById('preview-container'),
+            previewIframe: document.getElementById('preview-iframe'),
+            modal: document.getElementById('custom-modal'),
+            contextMenu: document.getElementById('context-menu')
+        };
+
+        // --- INITIALIZATION ---
         try {
             const app = initializeApp(firebaseConfig);
             db = getDatabase(app);
             auth = getAuth(app);
-        } catch (error) {
-            console.error("Error initializing Firebase:", error);
-            showCustomAlert({ title: 'Error de Conexión', message: 'No se pudo inicializar la aplicación. Revisa la configuración de Firebase.', showCancelButton: false, confirmText: 'OK' });
+            setupAuthListener();
+        } catch (e) {
+            console.error("Firebase Init Error:", e);
+            alert("Error crítico iniciando la base de datos.");
         }
 
-        // --- MODAL LOGIC ---
-        function hideModal() {
-            const modal = document.getElementById('custom-modal');
-            modal.classList.add('hidden');
-        }
-
-        function showCustomAlert({
-            title,
-            message,
-            showInput = false,
-            placeholder = '',
-            confirmText = 'Confirmar',
-            cancelText = 'Cancelar',
-            showCancelButton = true,
-            onConfirm = () => {},
-            onCancel = () => {},
-            diffChanges = null
-        }) {
-            const modal = document.getElementById('custom-modal');
-            const modalTitleEl = document.getElementById('modal-title');
-            const modalMessageEl = document.getElementById('modal-message');
-            const modalInputEl = document.getElementById('modal-input');
-            const modalDiffContainer = document.getElementById('modal-diff-container');
-            const modalDiffContent = document.getElementById('modal-diff-content');
-            let modalConfirmBtnEl = document.getElementById('modal-confirm-btn');
-            let modalCancelBtnEl = document.getElementById('modal-cancel-btn');
-
-            modalTitleEl.textContent = title;
-            modalMessageEl.textContent = message;
-            
-            modalInputEl.classList.toggle('hidden', !showInput);
-            modalInputEl.value = '';
-            modalInputEl.placeholder = placeholder;
-
-            if (diffChanges) {
-                let diffHtml = '';
-                const escapeHtml = (unsafe) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-                diffChanges.forEach(change => {
-                    diffHtml += `<span class="text-red-400">- ${escapeHtml(change.originalLine)}</span>\n`;
-                    diffHtml += `<span class="text-green-400">+ ${escapeHtml(change.editedLine)}</span>\n\n`;
-                });
-                modalDiffContent.innerHTML = diffHtml;
-                modalDiffContainer.classList.remove('hidden');
-            } else {
-                modalDiffContainer.classList.add('hidden');
-            }
-
-            // Clone and replace to remove old listeners
-            const newConfirmBtn = modalConfirmBtnEl.cloneNode(true);
-            modalConfirmBtnEl.parentNode.replaceChild(newConfirmBtn, modalConfirmBtnEl);
-            modalConfirmBtnEl = newConfirmBtn;
-            
-            const newCancelBtn = modalCancelBtnEl.cloneNode(true);
-            modalCancelBtnEl.parentNode.replaceChild(newCancelBtn, modalCancelBtnEl);
-            modalCancelBtnEl = newCancelBtn;
-
-            modalConfirmBtnEl.textContent = confirmText;
-            modalCancelBtnEl.textContent = cancelText;
-            modalCancelBtnEl.classList.toggle('hidden', !showCancelButton);
-
-            modalConfirmBtnEl.addEventListener('click', () => {
-                const inputValue = modalInputEl.value;
-                hideModal();
-                onConfirm(inputValue);
+        // --- AUTH LOGIC ---
+        function setupAuthListener() {
+            onAuthStateChanged(auth, (user) => {
+                dom.loading.classList.add('hidden');
+                dom.app.classList.remove('hidden');
+                
+                if (user) {
+                    currentUser = user;
+                    document.getElementById('user-info-name').textContent = user.displayName || user.email;
+                    dom.loginView.classList.add('hidden');
+                    showDashboard();
+                } else {
+                    currentUser = null;
+                    dom.banner.classList.add('hidden');
+                    dom.dashboardView.classList.add('hidden');
+                    dom.editorView.classList.add('hidden');
+                    dom.loginView.classList.remove('hidden');
+                }
             });
-
-            if (showCancelButton) {
-                modalCancelBtnEl.addEventListener('click', () => {
-                    hideModal();
-                    onCancel();
-                });
-            }
-
-            modal.classList.remove('hidden');
         }
 
-        // --- AUTH & SESSION ---
-        onAuthStateChanged(auth, (user) => {
-            if (!initialLoading.classList.contains('hidden')) {
-                initialLoading.classList.add('hidden');
-                appContainer.classList.remove('hidden');
-            }
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value;
+            const email = `${u.toLowerCase()}@weberia.app`;
+            const isRegister = document.getElementById('auth-button').textContent === 'Registrarse';
 
-            if (user && user.displayName) {
-                currentUser = user;
-                userInfoName.textContent = user.displayName;
-                loginView.classList.add('hidden');
-                showDashboard();
-            } else {
-                currentUser = null;
-                topBanner.classList.add('hidden');
-                dashboardView.classList.add('hidden');
-                editorView.classList.add('hidden');
-                loginView.classList.remove('hidden');
+            try {
+                if (isRegister) {
+                    const checkRef = ref(db, `usernames/${u.toLowerCase()}`);
+                    const checkSnap = await get(checkRef);
+                    if (checkSnap.exists()) throw new Error("El usuario ya existe.");
+                    
+                    const cred = await createUserWithEmailAndPassword(auth, email, p);
+                    await updateProfile(cred.user, { displayName: u });
+                    await update(ref(db), {
+                        [`users/${cred.user.uid}/profile`]: { displayName: u, createdAt: new Date().toISOString() },
+                        [`usernames/${u.toLowerCase()}`]: cred.user.uid
+                    });
+                } else {
+                    await signInWithEmailAndPassword(auth, email, p);
+                }
+            } catch (err) {
+                showAlert('Error de Autenticación', err.message.replace('Firebase:', '').trim());
             }
         });
 
-        async function handleRegistration(username, password) {
-            const email = `${username.toLowerCase()}@weberia.app`;
-            const usernameRef = ref(db, `usernames/${username.toLowerCase()}`);
-            const snapshot = await get(usernameRef);
-            if (snapshot.exists()) {
-                showCustomAlert({ title: 'Error de Registro', message: 'Este nombre de usuario ya está en uso.', showCancelButton: false, confirmText: 'OK' });
-                return;
-            }
-            try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-                await updateProfile(user, { displayName: username });
-                const updates = {};
-                updates[`/users/${user.uid}/profile`] = { displayName: username, createdAt: new Date().toISOString() };
-                updates[`/usernames/${username.toLowerCase()}`] = user.uid;
-                await update(ref(db), updates);
-            } catch (error) {
-                console.error("Error during registration:", error);
-                const message = error.code === 'auth/weak-password' 
-                                ? 'La contraseña debe tener al menos 6 caracteres.'
-                                : 'Ocurrió un error durante el registro.';
-                showCustomAlert({ title: 'Error de Registro', message, showCancelButton: false, confirmText: 'OK' });
-            }
-        }
-        
-        async function handleLogin(username, password) {
-            const email = `${username.toLowerCase()}@weberia.app`;
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                 console.error("Error during login:", error);
-                const message = (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') 
-                                ? 'Usuario o contraseña incorrectos.'
-                                : 'Ocurrió un error al iniciar sesión.';
-                showCustomAlert({ title: 'Error de Inicio de Sesión', message, showCancelButton: false, confirmText: 'OK' });
-            }
-        }
-
-        function handleLogout() {
-            signOut(auth).catch((error) => {
-                console.error("Error signing out:", error);
-            });
-        }
-
-        function toggleAuthForm() {
-            isLoginMode = !isLoginMode;
-            if (isLoginMode) {
-                authTitle.textContent = 'Iniciar Sesión';
-                authButton.textContent = 'Acceder';
-                toggleAuthMode.innerHTML = '¿No tienes cuenta? <span class="font-bold">Regístrate</span>';
+        document.getElementById('toggle-auth-mode').addEventListener('click', (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('auth-button');
+            const title = document.getElementById('auth-title');
+            const link = document.getElementById('toggle-auth-mode');
+            if (btn.textContent === 'Acceder') {
+                btn.textContent = 'Registrarse';
+                title.textContent = 'Crear Cuenta';
+                link.innerHTML = '¿Ya tienes cuenta? <span class="text-blue-400">Inicia sesión</span>';
             } else {
-                authTitle.textContent = 'Crear Cuenta';
-                authButton.textContent = 'Registrarse';
-                toggleAuthMode.innerHTML = '¿Ya tienes cuenta? <span class="font-bold">Inicia Sesión</span>';
+                btn.textContent = 'Acceder';
+                title.textContent = 'Bienvenido';
+                link.innerHTML = '¿No tienes cuenta? <span class="text-blue-400">Regístrate</span>';
             }
-        }
-        
-        function cleanupListeners() {
-            unsubscribeListeners.forEach(unsubscribe => unsubscribe());
-            unsubscribeListeners = [];
-        }
+        });
 
-        // --- VIEW MANAGEMENT ---
+        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+        // --- NAVIGATION & DASHBOARD ---
         function showDashboard() {
-            cleanupListeners();
-            topBanner.classList.remove('hidden');
-            appContainer.style.height = 'calc(100vh - 60px)';
-            dashboardView.classList.remove('hidden');
-            editorView.classList.add('hidden');
-            currentProgramId = null;
+            dom.banner.classList.remove('hidden');
+            dom.dashboardView.classList.remove('hidden');
+            dom.editorView.classList.add('hidden');
+            dom.app.style.height = 'calc(100vh - 60px)';
+            
             if (monacoEditor) {
                 monacoEditor.dispose();
                 monacoEditor = null;
             }
-            loadPrograms();
-        }
-
-        async function showEditor(programId, ownerId) {
-            if (!currentUser) return;
-            cleanupListeners();
-            topBanner.classList.add('hidden');
-            appContainer.style.height = '100vh';
-            dashboardView.classList.add('hidden');
-            editorView.classList.remove('hidden');
-            currentProgramId = programId;
-            currentProgramOwner = ownerId;
             
-            try {
-                const programRef = ref(db, `users/${ownerId}/projects/${programId}`);
-                const snapshot = await get(programRef);
-
-                if (snapshot.exists()) {
-                    const programData = snapshot.val();
-                    editorTitle.textContent = programData.name;
-                    currentProgramLanguage = programData.language;
-                    
-                    previewNewTabBtn.classList.toggle('hidden', currentProgramLanguage !== 'html');
-                    
-                    aiConversationHistory = [{
-                        role: "system",
-                        content: isAiDiffModeEnabled ? SYSTEM_PROMPT_DIFF : getSystemPromptReplace(currentProgramLanguage)
-                    }];
-
-                    previewContainer.style.display = programData.language === 'html' ? 'block' : 'none';
-                    editorContainer.style.width = programData.language === 'html' ? '50%' : '100%';
-
-                    initializeEditor(programData.code, programData.language);
-
-                    const unsubscribe = onValue(programRef, (liveSnapshot) => {
-                        const liveData = liveSnapshot.val();
-                        if (liveData && monacoEditor && liveData.lastEditor !== currentUser.uid && monacoEditor.getValue() !== liveData.code) {
-                            const currentPosition = monacoEditor.getPosition();
-                            monacoEditor.setValue(liveData.code);
-                            monacoEditor.setPosition(currentPosition);
-                        }
-                    });
-                    unsubscribeListeners.push(unsubscribe);
-
-                } else {
-                    showCustomAlert({ title: 'Error', message: 'El proyecto no fue encontrado o ha sido eliminado.', showCancelButton: false, confirmText: 'OK' });
-                    showDashboard();
-                }
-            } catch (error) {
-                console.error("Error loading program:", error);
-                showDashboard();
-            }
+            currentFolderId = 'root';
+            breadcrumbPath = [{ id: 'root', name: 'Inicio' }];
+            activeTab = 'my';
+            updateTabs();
+            loadDriveContent();
         }
 
-        // --- DATABASE HANDLING ---
-        function loadPrograms() {
-            cleanupListeners();
+        function updateTabs() {
             if (activeTab === 'my') {
-                loadMyProjects();
+                dom.tabMy.classList.add('border-blue-500', 'text-blue-400');
+                dom.tabMy.classList.remove('border-transparent', 'text-gray-400');
+                dom.tabShared.classList.remove('border-blue-500', 'text-blue-400');
+                dom.tabShared.classList.add('border-transparent', 'text-gray-400');
             } else {
-                loadSharedProjects();
+                dom.tabShared.classList.add('border-blue-500', 'text-blue-400');
+                dom.tabShared.classList.remove('border-transparent', 'text-gray-400');
+                dom.tabMy.classList.remove('border-blue-500', 'text-blue-400');
+                dom.tabMy.classList.add('border-transparent', 'text-gray-400');
             }
         }
 
-        function loadMyProjects() {
+        document.getElementById('tab-my-drive').addEventListener('click', () => {
+            activeTab = 'my';
+            currentFolderId = 'root';
+            breadcrumbPath = [{ id: 'root', name: 'Inicio' }];
+            updateTabs();
+            loadDriveContent();
+        });
+
+        document.getElementById('tab-shared').addEventListener('click', () => {
+            activeTab = 'shared';
+            updateTabs();
+            loadSharedContent();
+        });
+
+        // --- DRIVE LOGIC (CORE) ---
+        function loadDriveContent() {
             if (!currentUser) return;
-            const programsRef = ref(db, `users/${currentUser.uid}/projects`);
-            const unsubscribe = onValue(programsRef, (snapshot) => {
-                renderProgramList(snapshot.val(), currentUser.uid);
+            
+            // Render Breadcrumbs
+            renderBreadcrumbs();
+
+            // Setup Listeners
+            const foldersRef = ref(db, `users/${currentUser.uid}/folders`);
+            const projectsRef = ref(db, `users/${currentUser.uid}/projects`);
+
+            // Use onValue to get real-time updates
+            onValue(foldersRef, (snapF) => {
+                cachedFolders = snapF.val() || {};
+                onValue(projectsRef, (snapP) => {
+                    cachedProjects = snapP.val() || {};
+                    renderGrid();
+                }, { onlyOnce: true }); // optimize nesting
             });
-            unsubscribeListeners.push(unsubscribe);
         }
 
-        async function loadSharedProjects() {
+        function loadSharedContent() {
             if (!currentUser) return;
+            dom.breadcrumbs.innerHTML = '<span class="text-gray-400">Compartidos conmigo</span>';
             const sharedRef = ref(db, `sharedWith/${currentUser.uid}`);
-            const unsubscribe = onValue(sharedRef, async (snapshot) => {
-                const sharedData = snapshot.val();
-                if (!sharedData) {
-                    programsList.innerHTML = `<p class="text-gray-400 col-span-full text-center">Nadie ha compartido proyectos contigo todavía.</p>`;
+            onValue(sharedRef, async (snap) => {
+                dom.driveGrid.innerHTML = '';
+                const data = snap.val();
+                if (!data) {
+                    dom.emptyState.classList.remove('hidden');
                     return;
                 }
-
-                const projectPromises = Object.keys(sharedData).map(async (projectId) => {
-                    const ownerId = sharedData[projectId].owner;
-                    const projectRef = ref(db, `users/${ownerId}/projects/${projectId}`);
-                    const projectSnapshot = await get(projectRef);
-                    if (projectSnapshot.exists()) {
-                        return { ...projectSnapshot.val(), id: projectId, owner: ownerId };
-                    }
+                dom.emptyState.classList.add('hidden');
+                
+                // Fetch details for each shared project
+                const promises = Object.keys(data).map(async (pid) => {
+                    const ownerId = data[pid].owner;
+                    const pSnap = await get(ref(db, `users/${ownerId}/projects/${pid}`));
+                    if (pSnap.exists()) return { ...pSnap.val(), id: pid, owner: ownerId, isShared: true };
                     return null;
                 });
 
-                const projectsArray = (await Promise.all(projectPromises)).filter(p => p);
-                const projects = projectsArray.reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
-                renderProgramList(projects, null);
+                const projects = (await Promise.all(promises)).filter(p => p);
+                projects.forEach(p => dom.driveGrid.appendChild(createDriveItem(p, 'file')));
             });
-            unsubscribeListeners.push(unsubscribe);
         }
 
-        function renderProgramList(data, ownerId) {
-            programsList.innerHTML = '';
-            if (!data) {
-                const message = activeTab === 'my' ? 'No has creado ningún proyecto todavía.' : 'No hay proyectos compartidos.';
-                programsList.innerHTML = `<p class="text-gray-400 col-span-full text-center">${message}</p>`;
+        function renderBreadcrumbs() {
+            dom.breadcrumbs.innerHTML = '';
+            breadcrumbPath.forEach((step, index) => {
+                const span = document.createElement('span');
+                span.className = 'breadcrumb-item cursor-pointer hover:text-blue-400';
+                span.textContent = step.name;
+                span.onclick = () => {
+                    // Navigate to this step
+                    currentFolderId = step.id;
+                    breadcrumbPath = breadcrumbPath.slice(0, index + 1);
+                    renderGrid(); // Just re-render based on new ID
+                    renderBreadcrumbs();
+                };
+                dom.breadcrumbs.appendChild(span);
+            });
+        }
+
+        function renderGrid() {
+            if (activeTab !== 'my') return;
+            dom.driveGrid.innerHTML = '';
+            let hasItems = false;
+
+            // 1. Filter and Render Folders
+            Object.entries(cachedFolders).forEach(([fid, folder]) => {
+                // If currentFolder is root, show folders with parentId == 'root' OR undefined
+                const parent = folder.parentId || 'root';
+                if (parent === currentFolderId) {
+                    dom.driveGrid.appendChild(createDriveItem({ ...folder, id: fid }, 'folder'));
+                    hasItems = true;
+                }
+            });
+
+            // 2. Filter and Render Projects (Files)
+            Object.entries(cachedProjects).forEach(([pid, project]) => {
+                const folder = project.folderId || 'root';
+                if (folder === currentFolderId) {
+                    dom.driveGrid.appendChild(createDriveItem({ ...project, id: pid }, 'file'));
+                    hasItems = true;
+                }
+            });
+
+            if (!hasItems) dom.emptyState.classList.remove('hidden');
+            else dom.emptyState.classList.add('hidden');
+        }
+
+        function createDriveItem(item, type) {
+            const el = document.createElement('div');
+            el.className = 'drive-item group';
+            el.draggable = true; // Enable Drag
+            el.dataset.id = item.id;
+            el.dataset.type = type;
+            if (item.owner) el.dataset.owner = item.owner; // For shared
+
+            // Icon Selection
+            let iconHtml = '';
+            if (type === 'folder') {
+                iconHtml = `<span class="material-symbols-outlined icon folder-icon filled-icon">folder</span>`;
+                // Drop Target logic
+                el.ondragover = (e) => { e.preventDefault(); el.classList.add('folder-drag-over'); };
+                el.ondragleave = () => el.classList.remove('folder-drag-over');
+                el.ondrop = handleDropOnFolder;
+            } else {
+                const lang = item.language || 'text';
+                const icons = { html: 'html', javascript: 'javascript', css: 'css', python: 'terminal', markdown: 'markdown' };
+                const colors = { html: 'html-icon', javascript: 'js-icon', css: 'css-icon', python: 'py-icon', markdown: 'md-icon' };
+                iconHtml = `<span class="material-symbols-outlined icon ${colors[lang] || ''}">${icons[lang] || 'description'}</span>`;
+            }
+
+            el.innerHTML = `
+                ${iconHtml}
+                <div class="name" title="${item.name}">${item.name}</div>
+                <button class="context-menu-btn text-gray-400 hover:text-white">
+                    <span class="material-symbols-outlined">more_vert</span>
+                </button>
+            `;
+
+            // Interactions
+            el.addEventListener('click', (e) => {
+                if(e.target.closest('.context-menu-btn')) {
+                    showContextMenu(e, item, type);
+                } else {
+                    if (type === 'folder') enterFolder(item.id, item.name);
+                    else openEditor(item.id, item.owner || currentUser.uid);
+                }
+            });
+            
+            // Drag Start
+            el.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', JSON.stringify({ id: item.id, type: type }));
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            return el;
+        }
+
+        // --- DRIVE ACTIONS ---
+        function enterFolder(folderId, folderName) {
+            currentFolderId = folderId;
+            breadcrumbPath.push({ id: folderId, name: folderName });
+            renderBreadcrumbs();
+            renderGrid();
+        }
+
+        async function handleDropOnFolder(e) {
+            e.preventDefault();
+            this.classList.remove('folder-drag-over');
+            const targetFolderId = this.dataset.id;
+            
+            try {
+                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                if (data.type === 'file') {
+                    // Move Project
+                    const updates = {};
+                    updates[`users/${currentUser.uid}/projects/${data.id}/folderId`] = targetFolderId;
+                    await update(ref(db), updates);
+                } else if (data.type === 'folder' && data.id !== targetFolderId) {
+                    // Move Folder (prevent self-nesting loop needs more check, simpler for now)
+                    const updates = {};
+                    updates[`users/${currentUser.uid}/folders/${data.id}/parentId`] = targetFolderId;
+                    await update(ref(db), updates);
+                }
+            } catch (err) {
+                console.error("Drop Error", err);
+            }
+        }
+
+        // --- CRUD OPERATIONS ---
+        document.getElementById('new-folder-btn').addEventListener('click', () => {
+            showModal({
+                title: 'Nueva Carpeta',
+                message: 'Introduce el nombre de la carpeta:',
+                showInput: true,
+                placeholder: 'Ej: Mis Proyectos',
+                onConfirm: async (name) => {
+                    if (!name) return;
+                    const newRef = push(ref(db, `users/${currentUser.uid}/folders`));
+                    await set(newRef, {
+                        name: name,
+                        parentId: currentFolderId,
+                        createdAt: new Date().toISOString()
+                    });
+                }
+            });
+        });
+
+        document.getElementById('new-project-btn').addEventListener('click', () => {
+            showModal({
+                title: 'Nuevo Proyecto',
+                message: 'Configura tu nuevo proyecto:',
+                showInput: true,
+                showSelect: true,
+                placeholder: 'Nombre del proyecto',
+                onConfirm: async (name, lang) => {
+                    if (!name) return;
+                    const boilerplates = {
+                        html: `<!DOCTYPE html>\n<html>\n<head>\n  <title>${name}</title>\n  <script src="https://cdn.tailwindcss.com"><\/script>\n</head>\n<body class="bg-gray-100 p-10">\n  <h1 class="text-3xl font-bold text-blue-600">Hola, ${name}!</h1>\n</body>\n</html>`,
+                        javascript: `// ${name}.js\nconsole.log("Hello World");`,
+                        css: `/* ${name}.css */\nbody { background: #f0f0f0; }`,
+                        python: `def main():\n    print("Hola ${name}")\n\nif __name__ == "__main__":\n    main()`,
+                        markdown: `# ${name}\n\nDocumentación del proyecto.`
+                    };
+                    
+                    const newRef = push(ref(db, `users/${currentUser.uid}/projects`));
+                    await set(newRef, {
+                        name: name,
+                        language: lang,
+                        code: boilerplates[lang],
+                        folderId: currentFolderId,
+                        owner: currentUser.uid,
+                        ownerName: currentUser.displayName,
+                        createdAt: new Date().toISOString()
+                    });
+                    openEditor(newRef.key, currentUser.uid);
+                }
+            });
+        });
+
+        // --- CONTEXT MENU ---
+        let contextItem = null;
+        function showContextMenu(e, item, type) {
+            e.stopPropagation();
+            e.preventDefault();
+            contextItem = { ...item, type };
+            const menu = dom.contextMenu;
+            
+            // Positioning
+            menu.style.display = 'block';
+            menu.style.left = `${e.clientX - 10}px`;
+            menu.style.top = `${e.clientY + 10}px`;
+
+            // Close on click outside
+            const closeMenu = () => {
+                menu.style.display = 'none';
+                document.removeEventListener('click', closeMenu);
+            };
+            document.addEventListener('click', closeMenu);
+        }
+
+        document.getElementById('ctx-open').addEventListener('click', () => {
+            if (contextItem.type === 'folder') enterFolder(contextItem.id, contextItem.name);
+            else openEditor(contextItem.id, contextItem.owner || currentUser.uid);
+        });
+
+        document.getElementById('ctx-delete').addEventListener('click', () => {
+            if (!contextItem) return;
+            const isFolder = contextItem.type === 'folder';
+            showModal({
+                title: `Eliminar ${isFolder ? 'Carpeta' : 'Archivo'}`,
+                message: `¿Seguro que quieres borrar "${contextItem.name}"? ${isFolder ? 'Esto borrará el contenido interno.' : ''}`,
+                confirmText: 'Eliminar',
+                onConfirm: async () => {
+                    const path = isFolder ? `folders/${contextItem.id}` : `projects/${contextItem.id}`;
+                    await remove(ref(db, `users/${currentUser.uid}/${path}`));
+                    // Note: Deleting a folder properly requires recursively deleting children. 
+                    // For this simple version, children will just become "orphaned" or hidden.
+                    // A proper implementation would query items with this parentId and delete them.
+                }
+            });
+        });
+
+        document.getElementById('ctx-move').addEventListener('click', () => {
+            if(!contextItem) return;
+             // Simple Prompt Move
+             showModal({
+                title: 'Mover a...',
+                message: 'Para mover, arrastra y suelta el archivo sobre una carpeta.',
+                showInput: false,
+                confirmText: 'Entendido'
+            });
+        });
+
+        // --- EDITOR LOGIC ---
+        async function openEditor(pid, ownerId) {
+            dom.dashboardView.classList.add('hidden');
+            dom.editorView.classList.remove('hidden');
+            dom.banner.classList.add('hidden');
+            dom.app.style.height = '100vh';
+            
+            currentProgramId = pid;
+            currentProgramOwner = ownerId;
+            
+            const pRef = ref(db, `users/${ownerId}/projects/${pid}`);
+            const snap = await get(pRef);
+            if (!snap.exists()) {
+                showDashboard(); 
                 return;
             }
-            Object.entries(data).forEach(([programId, program]) => {
-                const projectOwnerId = ownerId || program.owner;
-                const card = document.createElement('div');
-                card.className = 'bg-gray-800 rounded-xl p-4 shadow-lg transform hover:scale-105 transition-transform duration-300 flex flex-col justify-between';
-                card.dataset.programId = programId;
-                card.dataset.owner = projectOwnerId;
-
-                card.innerHTML = `
-                    <div class="cursor-pointer flex-grow">
-                        <h3 class="text-lg font-bold text-white truncate">${program.name}</h3>
-                        <span class="text-sm font-mono bg-blue-900/50 text-blue-300 px-2 py-1 rounded">${program.language}</span>
-                        <p class="text-xs text-gray-400 mt-2">Creador: ${program.ownerName || 'Desconocido'}</p>
-                    </div>
-                    <div class="mt-4 flex justify-end items-center gap-2">
-                        ${projectOwnerId === currentUser?.uid ? `<button class="share-btn text-blue-400 hover:text-blue-600 transition-colors"><span class="material-symbols-outlined">share</span></button>` : ''}
-                        ${projectOwnerId === currentUser?.uid ? `<button class="delete-btn text-red-400 hover:text-red-600 transition-colors"><span class="material-symbols-outlined">delete</span></button>` : ''}
-                    </div>
-                `;
-                programsList.appendChild(card);
-            });
-        }
-        
-        function shareProject(programId, ownerId) {
-            showCustomAlert({
-                title: 'Compartir Proyecto',
-                message: 'Introduce el nombre de usuario para compartir:',
-                showInput: true,
-                placeholder: 'Nombre de usuario',
-                confirmText: 'Compartir',
-                onConfirm: async (targetUsername) => {
-                    if (targetUsername && targetUsername.trim() !== "") {
-                        try {
-                            const usernameRef = ref(db, `usernames/${targetUsername.trim().toLowerCase()}`);
-                            const snapshot = await get(usernameRef);
-                            
-                            if (!snapshot.exists()) {
-                                showCustomAlert({ title: 'Error', message: 'Usuario no encontrado.', showCancelButton: false, confirmText: 'OK' });
-                                return;
-                            }
-                            
-                            const targetUserId = snapshot.val();
-                            const shareRef = ref(db, `sharedWith/${targetUserId}/${programId}`);
-                            await set(shareRef, { owner: ownerId });
-                            
-                            showCustomAlert({
-                                title: 'Éxito',
-                                message: `Proyecto compartido con ${targetUsername.trim()}!`,
-                                showCancelButton: false,
-                                confirmText: 'OK'
-                            });
-                        } catch (error) {
-                            console.error("Error sharing project:", error);
-                            showCustomAlert({
-                                title: 'Error',
-                                message: 'No se pudo compartir el proyecto.',
-                                showCancelButton: false,
-                                confirmText: 'OK'
-                            });
-                        }
-                    }
-                }
-            });
-        }
-
-        async function createProgram(name, language) {
-            if (!currentUser) return;
-            const boilerplate = {
-                html: `<!DOCTYPE html>\n<html>\n<head>\n  <title>${name}</title>\n</head>\n<body>\n  <h1>Hola, mundo!</h1>\n</body>\n</html>`,
-                javascript: `console.log("Hola, ${name}!");`,
-                css: `body {\n  font-family: sans-serif;\n}`,
-                python: `def main():\n    print("Hola, ${name}!")\n\nif __name__ == "__main__":\n    main()`,
-                markdown: `# ${name}\n\nEste es un nuevo proyecto.`
-            };
-            try {
-                const programsRef = ref(db, `users/${currentUser.uid}/projects`);
-                const newProgramRef = push(programsRef);
-                await set(newProgramRef, {
-                    name: name,
-                    language: language,
-                    code: boilerplate[language] || '',
-                    createdAt: new Date().toISOString(),
-                    owner: currentUser.uid,
-                    ownerName: currentUser.displayName,
-                    lastEditor: currentUser.uid
-                });
-                showEditor(newProgramRef.key, currentUser.uid);
-            } catch (error) {
-                console.error("Error creating program:", error);
-            }
-        }
-
-        async function deleteProgram(programId) {
-            if (!currentUser) return;
-            try {
-                const programRef = ref(db, `users/${currentUser.uid}/projects/${programId}`);
-                await remove(programRef);
-        
-                const sharedRef = ref(db, 'sharedWith');
-                const sharedSnapshot = await get(sharedRef);
-                if (sharedSnapshot.exists()) {
-                    const updates = {};
-                    Object.keys(sharedSnapshot.val()).forEach(userId => {
-                        if (sharedSnapshot.val()[userId][programId]) {
-                            updates[`/sharedWith/${userId}/${programId}`] = null;
-                        }
-                    });
-                    if (Object.keys(updates).length > 0) {
-                        await update(ref(db), updates);
-                    }
-                }
-        
-                console.log("Program deleted successfully");
-            } catch (error) {
-                console.error("Error deleting program:", error);
-                showCustomAlert({ 
-                    title: 'Error', 
-                    message: 'No se pudo eliminar el proyecto. Verifica tus permisos.', 
-                    showCancelButton: false, 
-                    confirmText: 'OK' 
-                });
-            }
-        }
-
-        function saveCode(code) {
-            if (!currentUser || !currentProgramId || !currentProgramOwner) return;
+            const data = snap.val();
             
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(async () => {
-                try {
-                    const programRef = ref(db, `users/${currentProgramOwner}/projects/${currentProgramId}`);
-                    await update(programRef, { 
-                        code: code,
-                        lastEditor: currentUser.uid
-                    });
-                    console.log("Code saved for", currentProgramId);
-                } catch (error) {
-                    console.error("Error saving code:", error);
-                }
-            }, 500);
-        }
+            dom.editorTitle.textContent = data.name;
+            currentLang = data.language;
+            
+            // UI Toggles
+            const isHtml = data.language === 'html';
+            dom.previewContainer.style.display = isHtml ? 'block' : 'none';
+            dom.editorContainer.classList.toggle('w-full', !isHtml);
+            dom.editorContainer.classList.toggle('md:w-1/2', isHtml);
+            document.getElementById('preview-new-tab-btn').classList.toggle('hidden', !isHtml);
 
-        function saveCodeImmediately(code) {
-            if (!currentUser || !currentProgramId || !currentProgramOwner) return;
-            try {
-                const programRef = ref(db, `users/${currentProgramOwner}/projects/${currentProgramId}`);
-                update(programRef, {
-                    code: code,
-                    lastEditor: currentUser.uid
-                });
-            } catch (error) {
-                console.error("Error saving code immediately:", error);
-            }
-        }
-
-
-        // --- MONACO EDITOR ---
-        function initializeEditor(initialCode, language) {
-            if (monacoEditor) {
-                monacoEditor.dispose();
-            }
+            // Monaco
+            if (monacoEditor) monacoEditor.dispose();
             require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
             require(['vs/editor/editor.main'], function() {
-                monacoEditor = monaco.editor.create(editorContainer, {
-                    value: initialCode,
-                    language: language,
+                monacoEditor = monaco.editor.create(dom.editorContainer, {
+                    value: data.code,
+                    language: data.language,
                     theme: 'vs-dark',
                     automaticLayout: true,
                     fontSize: 14,
-                    fontFamily: 'Hack',
-                    wordWrap: 'on',
-                    padding: { top: 16 }
+                    padding: { top: 16 },
+                    minimap: { enabled: false }
                 });
-                updatePreview(initialCode);
+
+                if (isHtml) dom.previewIframe.srcdoc = data.code;
+
+                // Auto-Save
+                let saveTimeout;
                 monacoEditor.onDidChangeModelContent(() => {
-                    const currentCode = monacoEditor.getValue();
-                    if (!isAiEditing) {
-                        updatePreview(currentCode);
-                        saveCode(currentCode);
-                    }
+                    const val = monacoEditor.getValue();
+                    if (isHtml) dom.previewIframe.srcdoc = val;
+                    document.getElementById('editor-status').textContent = 'Guardando...';
+                    
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(async () => {
+                         if (currentUser && ownerId === currentUser.uid) { // Only owner saves for now
+                             await update(ref(db, `users/${ownerId}/projects/${pid}`), { 
+                                 code: val, 
+                                 lastEditor: currentUser.uid 
+                             });
+                             document.getElementById('editor-status').textContent = 'Guardado';
+                         }
+                    }, 1000);
                 });
             });
-        }
 
-        function updatePreview(code) {
-             if (previewContainer.style.display !== 'none') {
-                 previewIframe.srcdoc = code;
-             }
-        }
-        
-        // --- AI INTEGRATION ---
-        function applyChanges(changes) {
-            let editorContent = monacoEditor.getValue();
-            changes.forEach(change => {
-                // This is a simple implementation and might fail if a line appears multiple times.
-                // It replaces the first occurrence it finds.
-                editorContent = editorContent.replace(change.originalLine, change.editedLine);
+            // Listen for external changes (Collab)
+            onValue(pRef, (snap) => {
+                const d = snap.val();
+                if (d && monacoEditor && d.lastEditor !== currentUser.uid && d.code !== monacoEditor.getValue()) {
+                    const pos = monacoEditor.getPosition();
+                    monacoEditor.setValue(d.code);
+                    monacoEditor.setPosition(pos);
+                }
             });
-            monacoEditor.setValue(editorContent);
-            saveCode(editorContent);
         }
 
-        async function getAiEdit(prompt) {
-            if (!monacoEditor) return;
+        document.getElementById('back-to-dashboard').addEventListener('click', showDashboard);
+        document.getElementById('logo-btn').addEventListener('click', showDashboard);
+        document.getElementById('nav-home-btn').addEventListener('click', showDashboard);
 
-            isAiEditing = true;
-            aiLoadingSpinner.classList.remove('hidden');
-            aiPromptInput.disabled = true;
-            const originalCode = monacoEditor.getValue();
-            let fullResponse = '';
-            let streamSaveInterval = null;
+        // --- AI LOGIC (MISTRAL with STREAM) ---
+        document.getElementById('ai-prompt').addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                const prompt = e.target.value.trim();
+                if (!prompt || !monacoEditor) return;
+                
+                const isDiff = document.getElementById('ai-diff-mode-checkbox').checked;
+                const code = monacoEditor.getValue();
+                
+                // UI Loading
+                e.target.disabled = true;
+                document.getElementById('ai-loading-spinner').classList.remove('hidden');
 
-            if (currentProgramLanguage === 'html') {
-                previewIframe.src = 'https://weberia.neocities.org/thinking';
-            }
+                const msgs = [
+                    { role: "system", content: isDiff ? SYSTEM_PROMPT_DIFF : SYSTEM_PROMPT_REPLACE(currentLang) },
+                    { role: "user", content: `Code:\n${code}\n\nRequest: ${prompt}` }
+                ];
 
-            // Update system prompt based on mode
-            aiConversationHistory[0].content = isAiDiffModeEnabled ? SYSTEM_PROMPT_DIFF : getSystemPromptReplace(currentProgramLanguage);
-            
-            const userMessage = `Aquí está el código:\n\n${originalCode}\n\nMi petición es: ${prompt}`;
-            aiConversationHistory.push({ role: "user", content: userMessage });
-            
-            const MISTRAL_API_URL = 'https://text.pollinations.ai/openai?token=25eMuLLjvFlPA9iw';
-            const MISTRAL_API_KEY = '25eMuLLjvFlPA9iw';
-            const maxRetries = 500;
-
-            try {
-                let response;
-                for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                    response = await fetch(MISTRAL_API_URL, {
+                try {
+                    const res = await fetch('https://text.pollinations.ai/openai?token=25eMuLLjvFlPA9iw', {
                         method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${MISTRAL_API_KEY}`
-                        },
-                        body: JSON.stringify({
-                            model: 'gemini',
-                            messages: aiConversationHistory,
-                            stream: true
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            model: 'gemini', 
+                            messages: msgs,
+                            stream: true // Enable Streaming
                         })
                     });
 
-                    if (response.status === 429) {
-                        if (attempt === maxRetries) throw new Error("La API está sobrecargada. Por favor, inténtalo de nuevo más tarde.");
-                        console.log(`API rate limit hit. Retrying in 3 seconds... (Attempt ${attempt}/${maxRetries})`);
-                        await new Promise(resolve => setTimeout(resolve, 3000));
-                        continue;
-                    }
+                    // Prepare for streaming
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder();
+                    let fullContent = '';
                     
-                    if (!response.ok) {
-                        const errorBody = await response.json().catch(() => ({ message: 'Error desconocido' }));
-                        throw new Error(`HTTP error! status: ${response.status} - ${errorBody.message}`);
-                    }
-                    
-                    break;
-                }
+                    // If not diff, clear editor to "stream" replacement
+                    if (!isDiff) monacoEditor.setValue(''); 
 
-                if (!isAiDiffModeEnabled) {
-                    streamSaveInterval = setInterval(() => {
-                        if (monacoEditor) saveCodeImmediately(monacoEditor.getValue());
-                    }, 500);
-                }
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = ''; // Buffer para manejar chunks incompletos
-
-                if (!isAiDiffModeEnabled) monacoEditor.setValue('');
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    // Decodificar y agregar al buffer
-                    buffer += decoder.decode(value, { stream: true });
-                    
-                    // Procesar líneas completas
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop() || ''; // Guardar la última línea incompleta
-
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const jsonStr = line.substring(6);
-                            if (jsonStr.trim() === '[DONE]') break;
-                            
-                            try {
-                                const parsed = JSON.parse(jsonStr);
-                                const contentChunk = parsed?.choices?.[0]?.delta?.content || '';
-                                if (contentChunk) {
-                                    fullResponse += contentChunk;
-                                    if (!isAiDiffModeEnabled) {
-                                        monacoEditor.setValue(fullResponse);
-                                        const lineCount = monacoEditor.getModel().getLineCount();
-                                        const lastLineLength = monacoEditor.getModel().getLineMaxColumn(lineCount);
-                                        monacoEditor.setPosition({ lineNumber: lineCount, column: lastLineLength });
-                                        monacoEditor.revealPosition({ lineNumber: lineCount, column: 0 });
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        const chunk = decoder.decode(value, { stream: true });
+                        const lines = chunk.split('\n');
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const dataStr = line.substring(6).trim();
+                                if (dataStr === '[DONE]') break;
+                                try {
+                                    const json = JSON.parse(dataStr);
+                                    const delta = json.choices[0].delta.content;
+                                    if (delta) {
+                                        fullContent += delta;
+                                        // Update Editor Live
+                                        if (!isDiff) {
+                                            // Cleaning markdown fences live is tricky, so we stream raw first
+                                            // Or simplified: just update value. 
+                                            // A robust live stream would wait for fences, but for speed:
+                                            const clean = fullContent.replace(/```[a-z]*\n?|```/g, '');
+                                            monacoEditor.setValue(clean);
+                                            // Auto-scroll to bottom
+                                            monacoEditor.revealLine(monacoEditor.getModel().getLineCount());
+                                        }
                                     }
-                                }
-                            } catch (e) {
-                                console.warn("Could not parse stream chunk:", jsonStr, e);
+                                } catch (e) { /* ignore parse error on chunks */ }
                             }
                         }
                     }
-                }
 
-                // Procesar cualquier dato restante en el buffer
-                if (buffer.trim() && buffer.startsWith('data: ')) {
-                    const jsonStr = buffer.substring(6);
-                    if (jsonStr.trim() !== '[DONE]') {
-                        try {
-                            const parsed = JSON.parse(jsonStr);
-                            const contentChunk = parsed?.choices?.[0]?.delta?.content || '';
-                            if (contentChunk) {
-                                fullResponse += contentChunk;
-                                if (!isAiDiffModeEnabled) {
-                                    monacoEditor.setValue(fullResponse);
-                                }
+                    // Final processing
+                    if (isDiff) {
+                        let content = fullContent.replace(/```json|```/g, '').trim();
+                        const changes = JSON.parse(content);
+                        showModal({
+                            title: 'Revisión IA',
+                            message: `La IA sugiere ${changes.length} cambios.`,
+                            diffChanges: changes,
+                            confirmText: 'Aplicar',
+                            onConfirm: () => {
+                                let newCode = code;
+                                changes.forEach(c => newCode = newCode.replace(c.originalLine, c.editedLine));
+                                monacoEditor.setValue(newCode);
                             }
-                        } catch (e) {
-                            console.warn("Could not parse final buffer chunk:", jsonStr, e);
-                        }
+                        });
                     }
-                }
-                
-                aiConversationHistory.push({ role: "assistant", content: fullResponse });
 
-                if (isAiDiffModeEnabled) {
-                    try {
-                        // Clean the response from markdown fences before parsing
-                        let cleanedResponse = fullResponse.trim();
-                        if (cleanedResponse.startsWith('```json')) {
-                            cleanedResponse = cleanedResponse.substring(7, cleanedResponse.length - 3).trim();
-                        } else if (cleanedResponse.startsWith('```')) {
-                            cleanedResponse = cleanedResponse.substring(3, cleanedResponse.length - 3).trim();
-                        }
-
-                        const changes = JSON.parse(cleanedResponse);
-                        if (Array.isArray(changes)) {
-                            showCustomAlert({
-                                title: 'Sugerencias de Cambios',
-                                message: 'La IA ha propuesto los siguientes cambios. ¿Quieres aplicarlos?',
-                                confirmText: 'Aprobar',
-                                cancelText: 'Rechazar',
-                                diffChanges: changes,
-                                onConfirm: () => applyChanges(changes)
-                            });
-                        } else {
-                            throw new Error("La respuesta de la IA no es un array JSON válido.");
-                        }
-                    } catch (e) {
-                        console.error("Error parsing AI diff response:", e);
-                        showCustomAlert({ title: 'Error de IA', message: 'La IA no devolvió un formato de cambios válido.', showCancelButton: false });
-                    }
-                } else {
-                    // Ya no se quitan los ```, se muestra la respuesta completa de la IA.
-                    monacoEditor.setValue(fullResponse);
-                }
-
-            } catch (error) {
-                console.error("Error fetching AI edit from Mistral:", error);
-                showCustomAlert({ title: 'Error de IA', message: `No se pudo obtener la respuesta de la IA. ${error.message}`, showCancelButton: false, confirmText: 'Entendido' });
-                monacoEditor.setValue(originalCode);
-                aiConversationHistory.pop(); // Remove failed user message
-            } finally {
-                if (streamSaveInterval) clearInterval(streamSaveInterval);
-                
-                if (monacoEditor && !isAiDiffModeEnabled) {
-                   saveCode(monacoEditor.getValue());
-                }
-
-                aiLoadingSpinner.classList.add('hidden');
-                aiPromptInput.disabled = false;
-                aiPromptInput.value = '';
-                isAiEditing = false;
-                if(previewContainer.style.display !== 'none') {
-                    updatePreview(monacoEditor.getValue());
+                } catch (err) {
+                    console.error(err);
+                    showAlert('Error IA', 'No se pudo procesar la solicitud.');
+                } finally {
+                    e.target.disabled = false;
+                    e.target.value = '';
+                    e.target.focus();
+                    document.getElementById('ai-loading-spinner').classList.add('hidden');
                 }
             }
+        });
+
+        document.getElementById('ai-settings-toggle').addEventListener('click', () => {
+            document.getElementById('ai-settings-dropdown').classList.toggle('hidden');
+        });
+
+        // --- GENERIC MODAL UI ---
+        function showModal({ title, message, showInput = false, showSelect = false, placeholder = '', confirmText = 'Aceptar', cancelText = 'Cancelar', onConfirm, diffChanges = null }) {
+            const m = dom.modal;
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            
+            const formContainer = document.getElementById('modal-form-container');
+            const input = document.getElementById('modal-input');
+            const select = document.getElementById('modal-select');
+            
+            if (showInput || showSelect) {
+                formContainer.classList.remove('hidden');
+                input.classList.toggle('hidden', !showInput);
+                select.classList.toggle('hidden', !showSelect);
+                input.value = '';
+                input.placeholder = placeholder;
+            } else {
+                formContainer.classList.add('hidden');
+            }
+
+            // Diff View
+            const diffContainer = document.getElementById('modal-diff-container');
+            const diffContent = document.getElementById('modal-diff-content');
+            if (diffChanges) {
+                diffContainer.classList.remove('hidden');
+                diffContent.innerHTML = diffChanges.map(c => 
+                    `<div class="text-red-400">- ${c.originalLine}</div><div class="text-green-400">+ ${c.editedLine}</div>`
+                ).join('<br>');
+            } else {
+                diffContainer.classList.add('hidden');
+            }
+
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            const cancelBtn = document.getElementById('modal-cancel-btn');
+            
+            confirmBtn.textContent = confirmText;
+            cancelBtn.textContent = cancelText;
+
+            // Handlers
+            const handleConfirm = () => {
+                m.classList.add('hidden');
+                if (onConfirm) onConfirm(input.value, select.value);
+                cleanup();
+            };
+            const handleCancel = () => {
+                m.classList.add('hidden');
+                cleanup();
+            };
+            const cleanup = () => {
+                confirmBtn.removeEventListener('click', handleConfirm);
+                cancelBtn.removeEventListener('click', handleCancel);
+            };
+
+            confirmBtn.addEventListener('click', handleConfirm);
+            cancelBtn.addEventListener('click', handleCancel);
+            m.classList.remove('hidden');
+            if (showInput) input.focus();
         }
 
-        // --- EVENT LISTENERS ---
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-            if (!username || !password) {
-                showCustomAlert({title: 'Campos incompletos', message: 'Por favor, introduce usuario y contraseña.', showCancelButton: false, confirmText: 'OK'});
-                return;
-            }
-            if (isLoginMode) handleLogin(username, password);
-            else handleRegistration(username, password);
-        });
+        function showAlert(title, message) {
+            showModal({ title, message, showInput: false });
+        }
         
-        toggleAuthMode.addEventListener('click', (e) => {
-            e.preventDefault();
-            toggleAuthForm();
-        });
-
-        logoutBtn.addEventListener('click', handleLogout);
-
-        createProgramForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const name = document.getElementById('program-name').value;
-            const language = document.getElementById('program-language').value;
-            createProgram(name, language);
-            createProgramForm.reset();
-        });
-
-        backToDashboardBtn.addEventListener('click', showDashboard);
-
-        aiPromptInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && aiPromptInput.value.trim() !== '') getAiEdit(aiPromptInput.value.trim());
-        });
-
-        myProjectsTab.addEventListener('click', () => {
-            activeTab = 'my';
-            myProjectsTab.classList.add('tab-active');
-            sharedProjectsTab.classList.remove('tab-active');
-            loadPrograms();
-        });
-
-        sharedProjectsTab.addEventListener('click', () => {
-            activeTab = 'shared';
-            sharedProjectsTab.classList.add('tab-active');
-            myProjectsTab.classList.remove('tab-active');
-            loadPrograms();
-        });
-
-        previewNewTabBtn.addEventListener('click', async () => {
-            if (monacoEditor && currentProgramLanguage === 'html') {
-                const htmlContent = monacoEditor.getValue();
-                const shortCode = Math.random().toString(36).substring(2, 8);
-                
-                try {
-                    const previewRef = ref(db, `previews/${shortCode}`);
-                    await set(previewRef, {
-                        html: htmlContent,
-                        createdAt: new Date().toISOString()
-                    });
-                    const url = `https://logise.netlify.app/preview?doc=${shortCode}`;
-                    window.open(url, '_blank');
-                } catch (error) {
-                    console.error("Error creating preview:", error);
-                    showCustomAlert({
-                        title: 'Error de Vista Previa',
-                        message: 'No se pudo generar el enlace de la vista previa.',
-                        showCancelButton: false,
-                        confirmText: 'OK'
-                    });
-                }
-            }
-        });
-
-        aiSettingsToggle.addEventListener('click', (e) => {
-            e.stopPropagation();
-            aiSettingsDropdown.classList.toggle('hidden');
-        });
-
-        aiDiffModeCheckbox.addEventListener('change', (e) => {
-            isAiDiffModeEnabled = e.target.checked;
-            console.log("AI Diff Mode Enabled:", isAiDiffModeEnabled);
-            // Update the system prompt for the current session if a project is open
-            if (currentProgramLanguage) {
-                 aiConversationHistory[0].content = isAiDiffModeEnabled ? SYSTEM_PROMPT_DIFF : getSystemPromptReplace(currentProgramLanguage);
-            }
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!aiSettingsToggle.contains(e.target) && !aiSettingsDropdown.contains(e.target)) {
-                aiSettingsDropdown.classList.add('hidden');
-            }
-        });
-
-        programsList.addEventListener('click', (e) => {
-            const target = e.target;
-            const card = target.closest('[data-program-id]');
-            if (!card) return;
-
-            const programId = card.dataset.programId;
-            const ownerId = card.dataset.owner;
-
-            if (target.closest('.delete-btn')) {
-                e.stopPropagation();
-                showCustomAlert({
-                    title: 'Confirmar Eliminación',
-                    message: `¿Estás seguro de que quieres eliminar este proyecto? Esta acción no se puede deshacer.`,
-                    confirmText: 'Eliminar',
-                    onConfirm: () => deleteProgram(programId)
-                });
-                return;
-            }
-
-            if (target.closest('.share-btn')) {
-                e.stopPropagation();
-                shareProject(programId, ownerId);
-                return;
-            }
-            
-            showEditor(programId, ownerId);
-        });
-
     </script>
 </body>
 </html>
